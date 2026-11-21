@@ -7,14 +7,17 @@ document.addEventListener('DOMContentLoaded', () => {
         navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
 
-    // 2. Dark / Light Theme Toggle
+    // 2. Dark / Light Theme Toggle (Accessible aria-pressed sync)
     const themeBtn = document.getElementById('themeToggle');
     if (themeBtn) {
         themeBtn.addEventListener('click', async () => {
             const html = document.documentElement;
             const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             html.setAttribute('data-theme', next);
-            themeBtn.innerHTML = next === 'dark' ? '<i class="bi bi-sun-fill"></i>' : '<i class="bi bi-moon-stars"></i>';
+            themeBtn.setAttribute('aria-pressed', next === 'dark' ? 'true' : 'false');
+            themeBtn.innerHTML = next === 'dark'
+                ? '<i class="bi bi-sun-fill" aria-hidden="true"></i>'
+                : '<i class="bi bi-moon-stars" aria-hidden="true"></i>';
             await fetch(`/Account/SetPreferences?theme=${next}`, { method: 'POST' }).catch(() => {});
         });
     }
@@ -42,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(() => {});
     }
 
-    // 5. Global Wishlist AJAX Toggle (delegated for AJAX-reloaded cards too)
+    // 5. Global Wishlist AJAX Toggle (preserves returnUrl & updates aria-pressed)
     document.body.addEventListener('click', async (e) => {
         const btn = e.target.closest('.sn-wish-btn');
         if (!btn) return;
@@ -50,27 +53,39 @@ document.addEventListener('DOMContentLoaded', () => {
         e.stopPropagation();
 
         const propId = btn.dataset.propertyId;
+        btn.disabled = true;
         try {
             const res = await fetch(`/Property/ToggleWishlist?propertyId=${propId}`, { method: 'POST' });
             if (res.redirected) {
-                window.location.href = '/Account/Login';
+                const ret = encodeURIComponent(window.location.pathname + window.location.search);
+                window.location.href = `/Account/Login?returnUrl=${ret}`;
                 return;
             }
             if (!res.ok) return;
             const data = await res.json();
             btn.classList.toggle('saved', data.saved);
+            btn.setAttribute('aria-pressed', data.saved ? 'true' : 'false');
             const icon = btn.querySelector('i');
             if (icon) {
                 icon.className = data.saved ? 'bi bi-heart-fill' : 'bi bi-heart';
             }
         } catch {
-            // ignore
+            // resilient failure
+        } finally {
+            btn.disabled = false;
         }
     });
 
-    // 6. Keyboard Shortcut: "/" focuses catalog search bar
+    // 6. Keyboard Shortcut: "/" focuses catalog search bar (respects all editable fields)
     document.addEventListener('keydown', (e) => {
-        if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+        const active = document.activeElement;
+        const isEditing = active && (
+            active.tagName === 'INPUT' ||
+            active.tagName === 'TEXTAREA' ||
+            active.tagName === 'SELECT' ||
+            active.isContentEditable
+        );
+        if (e.key === '/' && !isEditing) {
             const searchInput = document.getElementById('searchQuery');
             if (searchInput) {
                 e.preventDefault();

@@ -36,6 +36,7 @@ namespace AirbnbBooking.Controllers
         [HttpGet]
         public async Task<IActionResult> HostChartData(int rangeDays = 90)
         {
+            rangeDays = rangeDays is 30 or 90 or 180 or 365 ? rangeDays : 90;
             var vm = await BuildHostDashboardAsync(rangeDays);
             return Json(new
             {
@@ -44,7 +45,10 @@ namespace AirbnbBooking.Controllers
                 bookings = vm.MonthlyBookingCounts,
                 statusDist = vm.StatusDistribution,
                 occupancyRate = vm.OccupancyRatePercent,
-                totalNet = vm.TotalNetPayouts
+                totalNetFormatted = _helper.FormatMoney(vm.TotalNetPayouts),
+                pendingFormatted = _helper.FormatMoney(vm.PendingPayoutAmount),
+                totalBookings = vm.TotalBookings,
+                rangeLabel = rangeDays == 365 ? "Last 12 Months" : $"Last {rangeDays} Days"
             });
         }
 

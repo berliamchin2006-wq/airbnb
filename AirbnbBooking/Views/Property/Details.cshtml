@@ -4,44 +4,61 @@
     var p = Model.Property;
     ViewData["Title"] = p.Title;
     var photos = p.Photos.OrderByDescending(ph => ph.IsPrimary).ThenBy(ph => ph.DisplayOrder).ToList();
-    string mainImg = Helper.ResolvePhotoUrl(photos.FirstOrDefault()?.FileName, "properties");
+    string mainImg = Helper.ResolveOptimizedPhotoUrl(photos.FirstOrDefault()?.FileName, "properties", 960, 640);
+    bool hasMultiplePhotos = photos.Count > 1;
+    string policySummary = p.CancellationPolicy switch
+    {
+        "Strict" => "50% refund up to 7 days before check-in.",
+        "Moderate" => "Full refund 5+ days prior; 50% refund 1–4 days prior.",
+        _ => "Full refund up to 24 hours before check-in."
+    };
+    string activeCurrency = Helper.GetActiveCurrency();
 }
 <div class="container-xl py-4">
     <!-- Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
         <div>
-            <div class="d-flex align-items-center gap-2 mb-1">
-                <span class="sn-eyebrow">@p.PropertyType</span>
-                <span class="badge bg-light text-dark border">@p.CancellationPolicy Cancellation</span>
+            <div class="d-flex align-items-center gap-2 mb-1 small text-muted">
+                <span class="fw-semibold text-body">@p.PropertyType</span>
+                <span>·</span>
+                <span>@p.CancellationPolicy Cancellation</span>
             </div>
             <h1 class="h3 fw-bold mb-1">@p.Title</h1>
             <div class="small text-muted d-flex flex-wrap gap-3">
-                <span><i class="bi bi-star-fill text-warning me-1"></i><strong>@(p.ReviewCount > 0 ? p.AverageRating.ToString("0.00") : "New")</strong> (@p.ReviewCount review@(p.ReviewCount == 1 ? "" : "s"))</span>
-                <span><i class="bi bi-geo-alt-fill text-danger me-1"></i>@p.Address, @p.City, @p.State</span>
-                <span>Hosted by <strong>@p.Host.FullName</strong> @(p.Host.IdentityStatus == "Verified" ? "✓ Verified" : "")</span>
+                <span class="sn-num"><i class="bi bi-star-fill text-warning me-1" aria-hidden="true"></i><strong>@(p.ReviewCount > 0 ? p.AverageRating.ToString("0.00") : "New")</strong> (@p.ReviewCount @(p.ReviewCount == 1 ? "review" : "reviews"))</span>
+                <span><i class="bi bi-geo-alt-fill sn-link-accent me-1" aria-hidden="true"></i>@p.Address, @p.City, @p.State</span>
+                <span>
+                    Hosted by <strong>@p.Host.FullName</strong>
+                    @if (p.Host.IdentityStatus == "Verified")
+                    {
+                        <span class="ms-1 text-success"><i class="bi bi-patch-check-fill" aria-hidden="true"></i> Verified</span>
+                    }
+                </span>
             </div>
         </div>
         <div class="d-flex gap-2">
-            <button type="button" class="btn sn-btn-ghost btn-sm sn-wish-btn position-static rounded-pill px-3 @(Model.IsWishlisted ? "saved" : "")" style="width:auto;height:auto;box-shadow:none" data-property-id="@p.Id">
-                <i class="bi @(Model.IsWishlisted ? "bi-heart-fill" : "bi-heart") me-1"></i>Save
+            <button type="button" class="btn sn-btn-ghost btn-sm sn-wish-btn position-static rounded-pill px-3 @(Model.IsWishlisted ? "saved" : "")" style="width:auto;height:auto;box-shadow:none" data-property-id="@p.Id" aria-label="@(Model.IsWishlisted ? "Remove from saved stays" : "Save this stay")" aria-pressed="@(Model.IsWishlisted ? "true" : "false")">
+                <i class="bi @(Model.IsWishlisted ? "bi-heart-fill" : "bi-heart") me-1" aria-hidden="true"></i>Save
             </button>
             @if (Helper.IsOwnerOrAdmin(p.HostId))
             {
-                <a asp-action="Edit" asp-route-id="@p.Id" class="btn sn-btn-dark btn-sm"><i class="bi bi-pencil me-1"></i>Edit Listing</a>
+                <a asp-action="Edit" asp-route-id="@p.Id" class="btn sn-btn-dark btn-sm"><i class="bi bi-pencil me-1" aria-hidden="true"></i>Edit Listing</a>
             }
         </div>
     </div>
 
-    <!-- Multi-Photo Gallery -->
-    <div class="sn-gallery mb-4">
-        <img src="@mainImg" alt="@p.Title" class="sn-gallery-main" />
-        <div class="sn-gallery-side">
-            @for (int i = 1; i <= 2; i++)
-            {
-                var sidePhoto = photos.Count > i ? photos[i].FileName : photos.FirstOrDefault()?.FileName;
-                <img src="@Helper.ResolvePhotoUrl(sidePhoto, "properties")" alt="@p.Title photo @(i + 1)" />
-            }
-        </div>
+    <!-- Multi-Photo Gallery (No duplicate single-photo repetition, fixed height grid) -->
+    <div class="sn-gallery @(hasMultiplePhotos ? "" : "sn-gallery-single") mb-4">
+        <img src="@mainImg" alt="@p.Title main view" width="960" height="640" fetchpriority="high" decoding="async" class="sn-gallery-main" />
+        @if (hasMultiplePhotos)
+        {
+            <div class="sn-gallery-side">
+                @for (int i = 1; i < Math.Min(3, photos.Count); i++)
+                {
+                    <img src="@Helper.ResolveOptimizedPhotoUrl(photos[i].FileName, "properties", 520, 340)" alt="@p.Title gallery photo @(i + 1)" width="520" height="340" decoding="async" />
+                }
+            </div>
+        }
     </div>
 
     <div class="row g-4">
@@ -49,21 +66,21 @@
         <div class="col-lg-8">
             <div class="sn-card p-4 mb-4">
                 <div class="d-flex flex-wrap gap-4 pb-3 mb-3 border-bottom small fw-semibold">
-                    <span><i class="bi bi-people me-1 text-danger"></i>Up to @p.MaxGuests guests</span>
-                    <span><i class="bi bi-door-closed me-1 text-danger"></i>@p.Bedrooms bedroom(s)</span>
-                    <span><i class="bi bi-moon me-1 text-danger"></i>@p.Beds bed(s)</span>
-                    <span><i class="bi bi-droplet me-1 text-danger"></i>@p.Bathrooms bathroom(s)</span>
+                    <span><i class="bi bi-people me-1 sn-link-accent" aria-hidden="true"></i>Up to @p.MaxGuests @(p.MaxGuests == 1 ? "guest" : "guests")</span>
+                    <span><i class="bi bi-door-closed me-1 sn-link-accent" aria-hidden="true"></i>@p.Bedrooms @(p.Bedrooms == 1 ? "bedroom" : "bedrooms")</span>
+                    <span><i class="bi bi-moon me-1 sn-link-accent" aria-hidden="true"></i>@p.Beds @(p.Beds == 1 ? "bed" : "beds")</span>
+                    <span><i class="bi bi-droplet me-1 sn-link-accent" aria-hidden="true"></i>@p.Bathrooms @(p.Bathrooms == 1 ? "bathroom" : "bathrooms")</span>
                 </div>
-                <h5 class="fw-bold mb-2">About this space</h5>
+                <h2 class="h5 fw-bold mb-2">About this space</h2>
                 <p class="text-muted mb-4" style="white-space:pre-line">@p.Description</p>
 
-                <h5 class="fw-bold mb-3">Amenities included</h5>
+                <h2 class="h5 fw-bold mb-3">Amenities included</h2>
                 <div class="row g-2 mb-4">
                     @foreach (var pa in p.PropertyAmenities)
                     {
                         <div class="col-6 col-md-4">
                             <div class="sn-soft-box px-3 py-2 small d-flex align-items-center gap-2">
-                                <i class="bi @pa.Amenity.IconClass text-danger"></i>
+                                <i class="bi @pa.Amenity.IconClass sn-link-accent" aria-hidden="true"></i>
                                 <span>@pa.Amenity.Name</span>
                             </div>
                         </div>
@@ -72,7 +89,7 @@
 
                 @if (p.SeasonalRates.Any())
                 {
-                    <h5 class="fw-bold mb-2">Custom Seasonal &amp; Holiday Rates</h5>
+                    <h2 class="h5 fw-bold mb-2">Seasonal &amp; Holiday Rates</h2>
                     <div class="table-responsive mb-4">
                         <table class="table table-sm small mb-0">
                             <thead><tr><th>Season</th><th>Dates</th><th>Nightly Rate</th></tr></thead>
@@ -82,7 +99,7 @@
                                     <tr>
                                         <td class="fw-semibold">@sr.SeasonName</td>
                                         <td>@sr.StartDate.ToString("dd MMM yyyy") – @sr.EndDate.ToString("dd MMM yyyy")</td>
-                                        <td class="fw-bold text-danger">@Helper.FormatMoney(sr.NightlyRate)/night</td>
+                                        <td class="fw-bold sn-link-accent">@Helper.FormatMoney(sr.NightlyRate)/night</td>
                                     </tr>
                                 }
                             </tbody>
@@ -91,23 +108,26 @@
                 }
 
                 <div class="sn-soft-box p-3 small">
-                    <strong><i class="bi bi-clipboard-check text-danger me-1"></i>House Rules:</strong>
+                    <strong><i class="bi bi-clipboard-check sn-link-accent me-1" aria-hidden="true"></i>House Rules:</strong>
                     <span class="text-muted ms-1">@p.HouseRules</span>
+                    <div class="text-muted mt-1">
+                        <strong>@p.CancellationPolicy Cancellation:</strong> @policySummary
+                    </div>
                 </div>
             </div>
 
-            <!-- Interactive Location Map -->
+            <!-- Interactive Location Map (Lazy-loaded via IntersectionObserver) -->
             <div class="sn-card p-4 mb-4">
-                <h5 class="fw-bold mb-2"><i class="bi bi-geo-alt text-danger me-1"></i>Location &amp; Neighborhood</h5>
-                <p class="small text-muted mb-3">@p.Address, @p.Postcode @p.City, @p.State (Coordinates: @p.Latitude.ToString("F4"), @p.Longitude.ToString("F4"))</p>
-                <div id="detailMap" style="height:280px;border-radius:12px;"></div>
+                <h2 class="h5 fw-bold mb-2"><i class="bi bi-geo-alt sn-link-accent me-1" aria-hidden="true"></i>Location &amp; Neighborhood</h2>
+                <p class="small text-muted mb-3">@p.Address, @p.Postcode @p.City, @p.State</p>
+                <div id="detailMap" style="height:280px;border-radius:12px;background:var(--sn-surface-soft)" aria-label="Interactive map showing property location in @p.City"></div>
             </div>
 
             <!-- Reviews & 4-Category Reputation Breakdown -->
             <div class="sn-card p-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="fw-bold mb-0"><i class="bi bi-star-fill text-warning me-2"></i>@(p.ReviewCount > 0 ? $"{p.AverageRating:0.00} · {p.ReviewCount} Verified Reviews" : "Guest Reviews")</h5>
-                    <span class="small text-muted">Double-blind mutual review system</span>
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <h2 class="h5 fw-bold mb-0 sn-num"><i class="bi bi-star-fill text-warning me-2" aria-hidden="true"></i>@(p.ReviewCount > 0 ? $"{p.AverageRating:0.00} · {p.ReviewCount} Verified {(p.ReviewCount == 1 ? "Review" : "Reviews")}" : "Guest Reviews")</h2>
+                    <span class="small text-muted">Fair mutual reviews published after both parties submit or 14 days</span>
                 </div>
 
                 @if (Model.PublishedReviews.Count > 0)
@@ -116,7 +136,7 @@
                         @foreach (var metric in new[] { ("Cleanliness", Model.AvgCleanliness), ("Accuracy", Model.AvgAccuracy), ("Communication", Model.AvgCommunication), ("Location", Model.AvgLocation) })
                         {
                             <div class="col-6 col-md-3">
-                                <div class="sn-soft-box p-2 text-center">
+                                <div class="sn-soft-box p-2 text-center sn-num">
                                     <div class="small text-muted">@metric.Item1</div>
                                     <div class="fw-bold fs-5">@metric.Item2.ToString("0.0")</div>
                                 </div>
@@ -132,12 +152,12 @@
                                     <strong>@rev.Guest.FullName</strong>
                                     <span class="small text-muted ms-2">@rev.CreatedAt.ToString("dd MMM yyyy")</span>
                                 </div>
-                                <span class="badge bg-warning-subtle text-warning-emphasis">★ @rev.OverallRating.ToString("0.0")</span>
+                                <span class="badge bg-warning-subtle text-warning-emphasis sn-num"><i class="bi bi-star-fill me-1" aria-hidden="true"></i>@rev.OverallRating.ToString("0.0")</span>
                             </div>
                             <p class="small mt-2 mb-2">@rev.Comment</p>
                             @if (!string.IsNullOrEmpty(rev.PhotoPath))
                             {
-                                <img src="@Helper.ResolvePhotoUrl(rev.PhotoPath, "reviews")" alt="Review photo" class="rounded mb-2" style="max-height:130px" />
+                                <img src="@Helper.ResolvePhotoUrl(rev.PhotoPath, "reviews")" alt="Photo submitted by @rev.Guest.FullName" loading="lazy" decoding="async" class="rounded mb-2" style="max-height:130px" />
                             }
                             @if (!string.IsNullOrEmpty(rev.HostReply))
                             {
@@ -147,11 +167,11 @@
                             }
                             <div class="d-flex align-items-center gap-3 small">
                                 <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-muted helpful-btn" data-id="@rev.Id">
-                                    <i class="bi bi-hand-thumbs-up me-1"></i>Helpful (<span class="vote-count">@rev.HelpfulVotes</span>)
+                                    <i class="bi bi-hand-thumbs-up me-1" aria-hidden="true"></i>Helpful (<span class="vote-count sn-num">@rev.HelpfulVotes</span>)
                                 </button>
                                 @if (User.Identity?.IsAuthenticated == true)
                                 {
-                                    <form asp-controller="Review" asp-action="FlagReview" method="post" class="d-inline">
+                                    <form asp-controller="Review" asp-action="FlagReview" method="post" class="d-inline" onsubmit="return confirm('Report this review to StayNest moderators?')">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@rev.Id" />
                                         <input type="hidden" name="reason" value="Reported by user from listing page" />
@@ -164,42 +184,42 @@
                 }
                 else
                 {
-                    <p class="small text-muted mb-0">No published reviews yet. Reviews appear automatically once both guest and host submit or after the 14-day blind review window.</p>
+                    <p class="small text-muted mb-0">No published reviews yet. Reviews appear automatically once both guest and host submit or after the 14-day review window.</p>
                 }
             </div>
         </div>
 
-        <!-- Sticky Booking & Live Price Calculator Widget (Module 3) -->
+        <!-- Sticky Booking & Live Price Calculator Widget -->
         <div class="col-lg-4">
             <div class="sn-card p-4 sticky-top" style="top:86px;z-index:20">
-                <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-1 mb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-1 mb-3 sn-num">
                     <div class="text-nowrap">
                         <span class="fs-4 fw-bold">@Helper.FormatMoney(p.BaseNightlyRate)</span>
                         <span class="small text-muted">/ night</span>
                     </div>
-                    <span class="small text-muted text-nowrap">Wknd: @Helper.FormatMoney(p.CustomWeekendRate)</span>
+                    <span class="small text-muted text-nowrap">Weekend: @Helper.FormatMoney(p.CustomWeekendRate)</span>
                 </div>
 
-                <!-- Interactive Visual Availability Calendar (Self-Coded) -->
+                <!-- Interactive Visual Availability Calendar -->
                 <div class="sn-soft-box p-3 mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <button type="button" id="calPrev" class="btn btn-sm sn-btn-ghost py-0 px-2"><i class="bi bi-chevron-left"></i></button>
+                        <button type="button" id="calPrev" class="btn sn-btn-ghost cal-nav-btn" aria-label="Previous month"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
                         <strong class="small" id="calMonthLabel"></strong>
-                        <button type="button" id="calNext" class="btn btn-sm sn-btn-ghost py-0 px-2"><i class="bi bi-chevron-right"></i></button>
+                        <button type="button" id="calNext" class="btn sn-btn-ghost cal-nav-btn" aria-label="Next month"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
                     </div>
-                    <div class="d-grid text-center small text-muted mb-1" style="grid-template-columns:repeat(7,1fr);font-size:.7rem">
+                    <div class="d-grid text-center small text-muted mb-1" style="grid-template-columns:repeat(7,1fr);font-size:.72rem" aria-hidden="true">
                         <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
                     </div>
                     <div id="calGrid" class="d-grid gap-1 text-center" style="grid-template-columns:repeat(7,1fr)"></div>
-                    <div class="d-flex justify-content-between mt-2 pt-2 border-top" style="font-size:.7rem">
-                        <span class="text-muted"><span class="d-inline-block rounded-circle bg-danger me-1" style="width:7px;height:7px"></span>Selected</span>
-                        <span class="text-muted"><span class="d-inline-block rounded-circle bg-secondary opacity-50 me-1" style="width:7px;height:7px"></span>Booked / Unavailable</span>
+                    <div class="d-flex justify-content-between mt-2 pt-2 border-top" style="font-size:.72rem">
+                        <span class="text-muted"><span class="d-inline-block rounded-circle me-1" style="width:7px;height:7px;background:var(--sn-accent)"></span>Selected</span>
+                        <span class="text-muted"><span class="d-inline-block rounded-circle bg-secondary opacity-50 me-1" style="width:7px;height:7px"></span>Unavailable</span>
                     </div>
                 </div>
 
                 <!-- Booked Dates Indicator -->
                 <div id="bookedDatesBox" class="sn-soft-box p-2 px-3 small mb-3 d-none">
-                    <div class="fw-semibold mb-1"><i class="bi bi-calendar-x text-danger me-1"></i>Already Booked Dates:</div>
+                    <div class="fw-semibold mb-1"><i class="bi bi-calendar-x sn-link-accent me-1" aria-hidden="true"></i>Already Booked:</div>
                     <div id="bookedDatesList" class="text-muted"></div>
                 </div>
 
@@ -209,57 +229,60 @@
 
                     <div class="row g-2 mb-2">
                         <div class="col-6">
-                            <label class="form-label small fw-semibold mb-1">Check-In</label>
+                            <label for="bkCheckIn" class="form-label small fw-semibold mb-1">Check-In</label>
                             <input type="date" id="bkCheckIn" name="CheckInDate" value="@Model.BookingForm.CheckInDate.ToString("yyyy-MM-dd")" min="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control form-control-sm" required />
                         </div>
                         <div class="col-6">
-                            <label class="form-label small fw-semibold mb-1">Check-Out</label>
+                            <label for="bkCheckOut" class="form-label small fw-semibold mb-1">Check-Out</label>
                             <input type="date" id="bkCheckOut" name="CheckOutDate" value="@Model.BookingForm.CheckOutDate.ToString("yyyy-MM-dd")" min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")" class="form-control form-control-sm" required />
                         </div>
                     </div>
 
                     <div class="mb-2">
-                        <label class="form-label small fw-semibold mb-1">Guests (max @p.MaxGuests)</label>
-                        <input type="number" name="GuestCount" value="@Model.BookingForm.GuestCount" min="1" max="@p.MaxGuests" class="form-control form-control-sm" required />
+                        <label for="bkGuests" class="form-label small fw-semibold mb-1">Guests (max @p.MaxGuests)</label>
+                        <input type="number" id="bkGuests" name="GuestCount" value="@Model.BookingForm.GuestCount" min="1" max="@p.MaxGuests" class="form-control form-control-sm" required />
                     </div>
 
                     <div class="mb-2">
-                        <label class="form-label small fw-semibold mb-1">Promo Code (try <code>WELCOME10</code> or <code>STAY50</code>)</label>
+                        <label for="bkPromo" class="form-label small fw-semibold mb-1">Promo Code</label>
                         <div class="input-group input-group-sm">
-                            <input type="text" id="bkPromo" name="PromoCode" class="form-control text-uppercase" placeholder="Optional voucher" />
+                            <input type="text" id="bkPromo" name="PromoCode" class="form-control text-uppercase" placeholder="Optional voucher code" />
                             <button type="button" id="applyPromoBtn" class="btn sn-btn-ghost">Apply</button>
                         </div>
-                        <div id="promoFeedback" class="small mt-1"></div>
+                        <div id="promoFeedback" class="small mt-1" aria-live="polite"></div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold mb-1">Special Requests</label>
-                        <textarea name="SpecialRequests" rows="2" class="form-control form-control-sm" placeholder="Arrival time, extra pillows..."></textarea>
-                    </div>
+                    <details class="mb-3">
+                        <summary class="small fw-semibold text-muted" style="cursor:pointer">Add special request (optional)</summary>
+                        <div class="mt-2">
+                            <label for="bkRequests" class="visually-hidden">Special Requests</label>
+                            <textarea id="bkRequests" name="SpecialRequests" rows="2" class="form-control form-control-sm" placeholder="Arrival time, extra pillows..."></textarea>
+                        </div>
+                    </details>
 
-                    <!-- Live AJAX Price Breakdown -->
-                    <div id="priceError" class="alert sn-alert sn-alert-danger small py-2 d-none"></div>
-                    <div id="priceBreakdown" class="sn-soft-box p-3 small mb-3">
-                        <div class="d-flex justify-content-between mb-1"><span>Stay subtotal (<span id="pbNights">3</span> nights)</span><strong id="pbSub">RM 0.00</strong></div>
-                        <div class="d-flex justify-content-between mb-1"><span>Cleaning fee</span><span id="pbClean">RM 0.00</span></div>
-                        <div class="d-flex justify-content-between mb-1"><span>Service tax (10%)</span><span id="pbTax">RM 0.00</span></div>
-                        <div id="pbDiscRow" class="d-flex justify-content-between mb-1 text-success d-none"><span>Promo discount</span><span id="pbDisc">-RM 0.00</span></div>
+                    <!-- Live AJAX Price Breakdown (Synced to Active Currency) -->
+                    <div id="priceError" class="alert sn-alert sn-alert-danger small py-2 d-none" role="alert" aria-live="assertive"></div>
+                    <div id="priceBreakdown" class="sn-soft-box p-3 small mb-3" aria-live="polite">
+                        <div class="d-flex justify-content-between mb-1"><span>Stay subtotal (<span id="pbNights">3</span> nights)</span><strong id="pbSub">—</strong></div>
+                        <div class="d-flex justify-content-between mb-1"><span>Cleaning fee</span><span id="pbClean">—</span></div>
+                        <div class="d-flex justify-content-between mb-1"><span>Service tax (10%)</span><span id="pbTax">—</span></div>
+                        <div id="pbDiscRow" class="d-flex justify-content-between mb-1 text-success d-none"><span>Promo discount</span><span id="pbDisc">—</span></div>
                         <hr class="my-2" />
-                        <div class="d-flex justify-content-between fs-6 fw-bold"><span>Total (MYR)</span><span id="pbTotal">RM 0.00</span></div>
+                        <div class="d-flex justify-content-between fs-6 fw-bold"><span>Total (@activeCurrency)</span><span id="pbTotal">—</span></div>
                     </div>
 
                     @if (User.Identity?.IsAuthenticated == true)
                     {
-                        <button type="submit" id="reserveBtn" class="btn sn-btn-primary w-100 py-2">Reserve &amp; Proceed to Payment</button>
+                        <button type="submit" id="reserveBtn" class="btn sn-btn-primary w-100 py-2">Reserve &amp; Continue to Payment</button>
                     }
                     else
                     {
-                        <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="/Property/Details/@p.Id" class="btn sn-btn-primary w-100 py-2">Sign In to Reserve</a>
+                        <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@($"/Property/Details/{p.Id}?checkIn={Model.BookingForm.CheckInDate:yyyy-MM-dd}&checkOut={Model.BookingForm.CheckOutDate:yyyy-MM-dd}&guests={Model.BookingForm.GuestCount}")" class="btn sn-btn-primary w-100 py-2">Sign In to Reserve</a>
                     }
                 </form>
 
                 <div class="text-center small text-muted mt-3">
-                    <i class="bi bi-lock-fill me-1 text-success"></i>Protected by concurrency locking (no double-booking)
+                    <i class="bi bi-shield-check me-1 text-success" aria-hidden="true"></i>Instant availability lock · @p.CancellationPolicy cancellation
                 </div>
             </div>
         </div>
@@ -268,16 +291,46 @@
 
 @section Scripts {
     <script>
-        // 1. Property Location Leaflet Map
-        const detailMap = L.map('detailMap').setView([@p.Latitude, @p.Longitude], 14);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(detailMap);
-        L.marker([@p.Latitude, @p.Longitude]).addTo(detailMap).bindPopup("<strong>@p.Title.Replace("\"", "")</strong><br/>@p.City").openPopup();
+        // 1. Lazy-load Leaflet & init property map only when scrolled near viewport
+        let mapLoaded = false;
+        const mapEl = document.getElementById('detailMap');
+        function initDetailMap() {
+            if (mapLoaded || !mapEl) return;
+            mapLoaded = true;
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+            document.head.appendChild(link);
 
-        // 2. Load Booked Dates & Render Interactive Availability Calendar
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+            script.onload = () => {
+                const detailMap = L.map('detailMap').setView([@p.Latitude, @p.Longitude], 14);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(detailMap);
+                L.marker([@p.Latitude, @p.Longitude]).addTo(detailMap)
+                    .bindPopup("<strong>@p.Title.Replace("\"", "")</strong><br/>@p.City").openPopup();
+            };
+            document.body.appendChild(script);
+        }
+
+        if ('IntersectionObserver' in window && mapEl) {
+            const obs = new IntersectionObserver(entries => {
+                if (entries.some(e => e.isIntersecting)) {
+                    obs.disconnect();
+                    initDetailMap();
+                }
+            }, { rootMargin: '200px' });
+            obs.observe(mapEl);
+        } else {
+            initDetailMap();
+        }
+
+        // 2. Booked Dates & Interactive Visual Availability Calendar
         let bookedRanges = [];
-        let calCursor = new Date();
+        let calCursor = new Date(document.getElementById('bkCheckIn').value + 'T00:00:00');
+        if (isNaN(calCursor.getTime())) calCursor = new Date();
         calCursor.setDate(1);
         let pickingCheckout = false;
 
@@ -299,7 +352,8 @@
 
             const year = calCursor.getFullYear();
             const month = calCursor.getMonth();
-            label.textContent = calCursor.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+            const monthTitle = calCursor.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+            label.textContent = monthTitle;
 
             const firstDow = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -317,18 +371,22 @@
                 const isEdge = ymd === ciYmd || ymd === coYmd;
                 const inRange = ciYmd && coYmd && ymd > ciYmd && ymd < coYmd;
 
-                let style = 'padding:4px 0;border-radius:7px;font-size:.76rem;border:none;';
+                let style = '';
+                let stateText = 'available';
                 if (past || booked) {
-                    style += 'background:transparent;color:var(--sn-muted);text-decoration:line-through;opacity:.45;cursor:not-allowed;';
+                    style = 'background:transparent;color:var(--sn-muted);text-decoration:line-through;opacity:.45;cursor:not-allowed;';
+                    stateText = booked ? 'booked' : 'past';
                 } else if (isEdge) {
-                    style += 'background:var(--sn-accent);color:#fff;font-weight:700;cursor:pointer;';
+                    style = 'background:var(--sn-accent);color:#fff;font-weight:700;cursor:pointer;';
+                    stateText = ymd === ciYmd ? 'selected check-in' : 'selected check-out';
                 } else if (inRange) {
-                    style += 'background:var(--sn-accent-soft);color:var(--sn-accent);font-weight:600;cursor:pointer;';
+                    style = 'background:var(--sn-accent-soft);color:var(--sn-accent);font-weight:600;cursor:pointer;';
+                    stateText = 'in selected stay range';
                 } else {
-                    style += 'background:var(--sn-surface);color:var(--sn-ink);cursor:pointer;';
+                    style = 'background:var(--sn-surface);color:var(--sn-ink);cursor:pointer;';
                 }
 
-                html += `<button type="button" class="cal-day" data-ymd="${ymd}" ${(past || booked) ? 'disabled' : ''} style="${style}">${day}</button>`;
+                html += `<button type="button" class="cal-day" data-ymd="${ymd}" aria-label="${day} ${monthTitle}, ${stateText}" ${(past || booked) ? 'disabled' : ''} style="${style}">${day}</button>`;
             }
             grid.innerHTML = html;
         }
@@ -357,65 +415,74 @@
         });
 
         fetch('/Booking/GetBookedDates?propertyId=@p.Id')
-            .then(r => r.json())
+            .then(r => r.ok ? r.json() : [])
             .then(ranges => {
                 bookedRanges = ranges || [];
                 if (bookedRanges.length > 0) {
                     document.getElementById('bookedDatesBox').classList.remove('d-none');
                     document.getElementById('bookedDatesList').innerHTML = bookedRanges
-                        .map(r => `<span class="badge bg-danger-subtle text-danger me-1 mb-1">${r.start} → ${r.end}</span>`)
+                        .map(r => `<span class="badge bg-danger-subtle text-danger me-1 mb-1">${r.start} to ${r.end}</span>`)
                         .join('');
                 }
-                renderAvailCalendar();
-            });
+            })
+            .catch(() => {})
+            .finally(() => renderAvailCalendar());
 
-        // 3. Live AJAX Price Breakdown & Real-Time Conflict Checker
+        // 3. Live AJAX Price Breakdown (Active Currency + Always Clears Stale Promo Discount)
         async function refreshPrice() {
             const ci = document.getElementById('bkCheckIn').value;
             const co = document.getElementById('bkCheckOut').value;
             const promo = document.getElementById('bkPromo').value.trim();
             if (!ci || !co) return;
 
-            const url = `/Booking/CalculatePrice?propertyId=@p.Id&checkIn=${ci}&checkOut=${co}&promoCode=${encodeURIComponent(promo)}`;
-            const res = await fetch(url);
-            const data = await res.json();
-
+            const pbBox = document.getElementById('priceBreakdown');
             const errBox = document.getElementById('priceError');
             const reserveBtn = document.getElementById('reserveBtn');
             const promoFb = document.getElementById('promoFeedback');
+            pbBox.style.opacity = '0.6';
 
-            if (!data.ok) {
-                errBox.textContent = data.error;
+            try {
+                const url = `/Booking/CalculatePrice?propertyId=@p.Id&checkIn=${ci}&checkOut=${co}&promoCode=${encodeURIComponent(promo)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (!data.ok) {
+                    errBox.textContent = data.error;
+                    errBox.classList.remove('d-none');
+                    if (reserveBtn) reserveBtn.disabled = true;
+                    return;
+                }
+
+                errBox.classList.add('d-none');
+                if (reserveBtn) reserveBtn.disabled = false;
+
+                document.getElementById('pbNights').textContent = data.nights;
+                document.getElementById('pbSub').textContent = data.subtotalFormatted;
+                document.getElementById('pbClean').textContent = data.cleaningFeeFormatted;
+                document.getElementById('pbTax').textContent = data.serviceTaxFormatted;
+                document.getElementById('pbTotal').textContent = data.totalFormatted;
+
+                const discRow = document.getElementById('pbDiscRow');
+                if (data.discount > 0) {
+                    discRow.classList.remove('d-none');
+                    document.getElementById('pbDisc').textContent = `-${data.discountFormatted}`;
+                } else {
+                    discRow.classList.add('d-none');
+                }
+
+                if (data.promoInvalid) {
+                    promoFb.innerHTML = `<span class="text-danger">${data.promoMessage}</span>`;
+                } else if (data.promoMessage) {
+                    promoFb.innerHTML = `<span class="${data.discount > 0 ? 'text-success' : 'text-warning'}">${data.promoMessage}</span>`;
+                } else {
+                    promoFb.textContent = '';
+                }
+            } catch {
+                errBox.textContent = 'Could not verify availability right now. Please try again.';
                 errBox.classList.remove('d-none');
-                if (reserveBtn) reserveBtn.disabled = true;
-                return;
+            } finally {
+                pbBox.style.opacity = '1';
             }
-
-            if (data.promoInvalid) {
-                promoFb.innerHTML = `<span class="text-danger">${data.promoMessage}</span>`;
-                return;
-            }
-
-            errBox.classList.add('d-none');
-            if (reserveBtn) reserveBtn.disabled = false;
-
-            document.getElementById('pbNights').textContent = data.nights;
-            document.getElementById('pbSub').textContent = `RM ${data.subtotal.toFixed(2)}`;
-            document.getElementById('pbClean').textContent = `RM ${data.cleaningFee.toFixed(2)}`;
-            document.getElementById('pbTax').textContent = `RM ${data.serviceTax.toFixed(2)}`;
-            document.getElementById('pbTotal').textContent = `RM ${data.total.toFixed(2)}`;
-
-            const discRow = document.getElementById('pbDiscRow');
-            if (data.discount > 0) {
-                discRow.classList.remove('d-none');
-                document.getElementById('pbDisc').textContent = `-RM ${data.discount.toFixed(2)}`;
-            } else {
-                discRow.classList.add('d-none');
-            }
-
-            promoFb.innerHTML = data.promoMessage
-                ? `<span class="${data.discount > 0 ? 'text-success' : 'text-warning'}">${data.promoMessage}</span>`
-                : '';
         }
 
         document.getElementById('bkCheckIn')?.addEventListener('change', () => { renderAvailCalendar(); refreshPrice(); });

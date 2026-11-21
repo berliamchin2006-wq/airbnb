@@ -1,35 +1,50 @@
 @model List<Notification>
 @{
     ViewData["Title"] = "Notifications";
+    int unreadCount = Model.Count(n => !n.IsRead);
 }
 <div class="container-xl py-4" style="max-width:820px">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
         <div>
-            <span class="sn-eyebrow">Module 5 · Alerts</span>
-            <h2 class="fw-bold mt-1 mb-0">Notifications</h2>
+            <h1 class="h2 fw-bold mb-1">Notifications</h1>
+            <p class="small text-muted mb-0">@(unreadCount > 0 ? $"{unreadCount} unread {(unreadCount == 1 ? "alert" : "alerts")}" : "All caught up")</p>
         </div>
-        <form asp-action="MarkAllRead" method="post">
-            @Html.AntiForgeryToken()
-            <button type="submit" class="btn sn-btn-ghost btn-sm">Mark All as Read</button>
-        </form>
+        @if (unreadCount > 0)
+        {
+            <form asp-action="MarkAllRead" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn sn-btn-ghost btn-sm">Mark All as Read</button>
+            </form>
+        }
     </div>
 
     <div class="sn-card p-3">
         @if (!Model.Any())
         {
-            <div class="p-5 text-center text-muted">You are all caught up!</div>
+            <div class="p-5 text-center">
+                <i class="bi bi-bell-slash display-6 text-muted" aria-hidden="true"></i>
+                <h2 class="h6 fw-bold mt-3 mb-1">No notifications yet</h2>
+                <p class="small text-muted mb-3">Booking updates, messages, and stay reminders will appear here.</p>
+                <a asp-controller="Property" asp-action="Catalog" class="btn sn-btn-primary btn-sm">Explore Stays</a>
+            </div>
         }
         @foreach (var n in Model)
         {
-            <div class="p-3 rounded-3 mb-2 d-flex justify-content-between align-items-start @(n.IsRead ? "" : "sn-soft-box border-start border-4 border-danger")">
-                <div>
-                    <div class="fw-semibold">@n.Title <span class="badge bg-light text-dark border ms-1">@n.Type</span></div>
-                    <div class="small text-muted">@n.Message</div>
-                    <div class="small text-muted mt-1">@n.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")</div>
+            <div class="p-3 rounded-3 mb-2 d-flex justify-content-between align-items-start gap-3 @(n.IsRead ? "border" : "sn-notif-unread")">
+                <div class="d-flex gap-2 align-items-start">
+                    @if (!n.IsRead)
+                    {
+                        <span class="sn-unread-dot" aria-label="Unread"></span>
+                    }
+                    <div>
+                        <div class="fw-semibold">@n.Title <span class="badge bg-light text-dark border ms-1">@n.Type</span></div>
+                        <div class="small text-muted">@n.Message</div>
+                        <div class="small text-muted mt-1">@n.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")</div>
+                    </div>
                 </div>
                 @if (!string.IsNullOrEmpty(n.LinkUrl))
                 {
-                    <a href="@n.LinkUrl" class="btn btn-sm sn-btn-ghost">Open →</a>
+                    <a href="@n.LinkUrl" class="btn btn-sm sn-btn-ghost flex-shrink-0">Open<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
                 }
             </div>
         }

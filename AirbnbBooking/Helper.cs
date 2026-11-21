@@ -316,6 +316,23 @@ namespace AirbnbBooking
             return $"/uploads/{subFolder}/{fileName}";
         }
 
+        /// <summary>
+        /// Serves right-sized WebP/AVIF Unsplash variants when available to eliminate legacy JPEG oversizing.
+        /// </summary>
+        public static string ResolveOptimizedPhotoUrl(string? fileName, string subFolder, int width = 640, int height = 480)
+        {
+            string url = ResolvePhotoUrl(fileName, subFolder);
+            if (url.Contains("images.unsplash.com/", StringComparison.OrdinalIgnoreCase))
+            {
+                int qIdx = url.IndexOf('?');
+                string baseUrl = qIdx >= 0 ? url[..qIdx] : url;
+                return $"{baseUrl}?auto=format&fit=crop&w={width}&h={height}&q=78";
+            }
+            return url;
+        }
+
+        public string GetActiveCurrency() => _http.HttpContext?.Request.Cookies["StayNest_Currency"] ?? "MYR";
+
         // =====================================================================
         // 6. AES-256 Data-at-Rest Encryption & Bank Account Masking
         // =====================================================================

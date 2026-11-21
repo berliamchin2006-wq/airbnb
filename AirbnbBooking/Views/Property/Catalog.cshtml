@@ -5,116 +5,94 @@
 <div class="container-xl py-4">
     <!-- Hero Search & Discovery Banner -->
     <section class="sn-hero mb-4">
-        <div class="row align-items-center g-4">
+        <div class="row align-items-center g-3">
             <div class="col-lg-8">
-                <span class="badge bg-white bg-opacity-10 text-white rounded-pill px-3 py-2 mb-2">Module 2 · Listing,
-                    Search &amp; Spatial Discovery</span>
                 <h1 class="display-6 fw-bold mb-2">Find your next architectural stay across Malaysia</h1>
-                <p class="text-white-50 mb-0">Real-time date availability · Seasonal &amp; weekend pricing · Verified
-                    hosts · Instant QR check-in.</p>
+                <p class="sn-hero-sub mb-0">Live date availability · Seasonal &amp; weekend pricing · Verified hosts · Instant QR check-in.</p>
             </div>
             <div class="col-lg-4 text-lg-end">
-                <button type="button" id="toggleMapBtn" class="btn btn-light fw-semibold rounded-pill px-4 py-2">
-                    <i class="bi bi-map me-2 text-danger"></i>Toggle Discovery Map
+                <button type="button" id="toggleMapBtn" class="btn btn-light fw-semibold rounded-pill px-4 py-2" aria-expanded="false" aria-controls="discoveryMapWrap">
+                    <i class="bi bi-map me-2 sn-link-accent" aria-hidden="true"></i><span id="toggleMapLabel">Show Map</span>
                 </button>
             </div>
         </div>
 
         <!-- Dynamic AJAX Search Bar -->
-        <form id="searchForm" asp-action="Catalog" method="get" class="sn-hero-bar mt-4">
+        <form id="searchForm" asp-action="Catalog" method="get" class="sn-hero-bar mt-4" role="search" aria-label="Search stays">
             <input type="hidden" name="Page" id="searchPage" value="@Model.Page" />
             <div class="row g-2 align-items-end">
                 <div class="col-md-3">
-                    <label class="form-label small fw-semibold mb-1">Destination or Keyword</label>
-                    <input type="text" id="searchQuery" name="Query" value="@Model.Query"
-                        class="form-control form-control-sm" placeholder="KLCC, Penang, Villa... (press /)" />
+                    <label for="searchQuery" class="form-label small fw-semibold mb-1">Destination or Keyword</label>
+                    <input type="text" id="searchQuery" name="Query" value="@Model.Query" class="form-control form-control-sm" placeholder="KLCC, Penang, Villa... (press /)" />
                 </div>
                 <div class="col-6 col-md-2">
-                    <label class="form-label small fw-semibold mb-1">Check-In</label>
-                    <input type="date" name="CheckIn" value="@Model.CheckIn?.ToString("yyyy-MM-dd")"
-                        min="@DateTime.Today.ToString("yyyy-MM-dd")"
-                        class="form-control form-control-sm ajax-trigger" />
+                    <label for="filterCheckIn" class="form-label small fw-semibold mb-1">Check-In</label>
+                    <input type="date" id="filterCheckIn" name="CheckIn" value="@Model.CheckIn?.ToString("yyyy-MM-dd")" min="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control form-control-sm ajax-trigger" />
                 </div>
                 <div class="col-6 col-md-2">
-                    <label class="form-label small fw-semibold mb-1">Check-Out</label>
-                    <input type="date" name="CheckOut" value="@Model.CheckOut?.ToString("yyyy-MM-dd")"
-                        min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")"
-                        class="form-control form-control-sm ajax-trigger" />
+                    <label for="filterCheckOut" class="form-label small fw-semibold mb-1">Check-Out</label>
+                    <input type="date" id="filterCheckOut" name="CheckOut" value="@Model.CheckOut?.ToString("yyyy-MM-dd")" min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")" class="form-control form-control-sm ajax-trigger" />
                 </div>
                 <div class="col-6 col-md-1">
-                    <label class="form-label small fw-semibold mb-1">Guests</label>
-                    <input type="number" name="Guests" value="@Model.Guests" min="1" max="30"
-                        class="form-control form-control-sm ajax-trigger" placeholder="2" />
+                    <label for="filterGuests" class="form-label small fw-semibold mb-1">Guests</label>
+                    <input type="number" id="filterGuests" name="Guests" value="@Model.Guests" min="1" max="30" class="form-control form-control-sm ajax-trigger" placeholder="2" />
                 </div>
                 <div class="col-6 col-md-2">
-                    <label class="form-label small fw-semibold mb-1">Property Type</label>
-                    <select name="PropertyType" class="form-select form-select-sm ajax-trigger">
+                    <label for="filterType" class="form-label small fw-semibold mb-1">Property Type</label>
+                    <select id="filterType" name="PropertyType" class="form-select form-select-sm ajax-trigger">
                         <option value="">All Types</option>
-                        @foreach (var t in new[] { "Condominium", "Villa", "Townhouse", "Chalet", "Studio", "Apartment",
-                        "Bungalow" })
-
+                        @foreach (var t in new[] { "Condominium", "Villa", "Townhouse", "Chalet", "Studio", "Apartment", "Bungalow" })
                         {
                             <option value="@t" selected="@(Model.PropertyType == t)">@t</option>
                         }
                     </select>
                 </div>
                 <div class="col-md-2 d-flex gap-2">
-                    <button type="submit" class="btn sn-btn-primary btn-sm flex-grow-1 text-nowrap px-3"><i
-                            class="bi bi-search me-1"></i>Search</button>
-                    <a asp-action="Catalog" class="btn sn-btn-ghost btn-sm flex-shrink-0" title="Reset filters"><i
-                            class="bi bi-x-lg"></i></a>
+                    <button type="submit" class="btn sn-btn-primary btn-sm flex-grow-1 text-nowrap px-3"><i class="bi bi-search me-1" aria-hidden="true"></i>Search</button>
+                    <a asp-action="Catalog" class="btn sn-btn-ghost btn-sm flex-shrink-0" aria-label="Reset all search filters" title="Reset filters"><i class="bi bi-x-lg" aria-hidden="true"></i></a>
                 </div>
             </div>
 
             <!-- Secondary Filter Row: City, Price Range, Sort, Amenities -->
             <div class="row g-2 mt-2 pt-2 border-top align-items-center">
                 <div class="col-6 col-md-2">
-                    <select name="City" class="form-select form-select-sm ajax-trigger">
+                    <select id="filterCity" name="City" aria-label="Filter by city" class="form-select form-select-sm ajax-trigger">
                         <option value="">All Cities</option>
                         @foreach (var c in Model.AvailableCities)
-
                         {
                             <option value="@c" selected="@(Model.City == c)">@c</option>
                         }
                     </select>
                 </div>
                 <div class="col-6 col-md-2">
-                    <input type="number" name="MinPrice" value="@Model.MinPrice"
-                        class="form-control form-control-sm ajax-trigger" placeholder="Min RM/night" />
+                    <input type="number" id="filterMinPrice" name="MinPrice" aria-label="Minimum nightly price in RM" value="@Model.MinPrice" class="form-control form-control-sm ajax-trigger" placeholder="Min RM/night" />
                 </div>
                 <div class="col-6 col-md-2">
-                    <input type="number" name="MaxPrice" value="@Model.MaxPrice"
-                        class="form-control form-control-sm ajax-trigger" placeholder="Max RM/night" />
+                    <input type="number" id="filterMaxPrice" name="MaxPrice" aria-label="Maximum nightly price in RM" value="@Model.MaxPrice" class="form-control form-control-sm ajax-trigger" placeholder="Max RM/night" />
                 </div>
                 <div class="col-6 col-md-2">
-                    <select name="SortBy" class="form-select form-select-sm ajax-trigger">
+                    <select id="filterSortBy" name="SortBy" aria-label="Sort listings" class="form-select form-select-sm ajax-trigger">
                         <option value="featured" selected="@(Model.SortBy == "featured")">Sort: Featured</option>
                         <option value="price_asc" selected="@(Model.SortBy == "price_asc")">Price: Low to High</option>
-                        <option value="price_desc" selected="@(Model.SortBy == "price_desc")">Price: High to Low
-                        </option>
+                        <option value="price_desc" selected="@(Model.SortBy == "price_desc")">Price: High to Low</option>
                         <option value="rating" selected="@(Model.SortBy == "rating")">Highest Rated</option>
                         <option value="newest" selected="@(Model.SortBy == "newest")">Newest Listings</option>
                     </select>
                 </div>
                 <div class="col-md-4">
                     <div class="dropdown">
-                        <button class="btn btn-sm sn-btn-ghost w-100 dropdown-toggle text-start" type="button"
-                            data-bs-toggle="dropdown" data-bs-auto-close="outside">
-                            <i class="bi bi-sliders me-1"></i>Filter by Amenities (<span
-                                id="amenityCount">@Model.SelectedAmenityIds.Count</span>)
+                        <button class="btn btn-sm sn-btn-ghost w-100 dropdown-toggle text-start" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                            <i class="bi bi-sliders me-1" aria-hidden="true"></i>Amenities (<span id="amenityCount">@Model.SelectedAmenityIds.Count</span>)
                         </button>
                         <div class="dropdown-menu sn-dropdown p-3" style="min-width:300px">
                             <div class="row g-2">
                                 @foreach (var am in Model.AvailableAmenities)
-
                                 {
-
                                     bool isChecked = Model.SelectedAmenityIds.Contains(am.Id);
                                     <div class="col-6">
                                         <label class="form-check small d-flex align-items-center gap-1 mb-0">
-                                            <input class="form-check-input ajax-trigger amenity-cb" type="checkbox"
-                                                name="SelectedAmenityIds" value="@am.Id" checked="@isChecked" />
-                                            <i class="bi @am.IconClass text-danger"></i>
+                                            <input class="form-check-input ajax-trigger amenity-cb" type="checkbox" name="SelectedAmenityIds" value="@am.Id" checked="@isChecked" />
+                                            <i class="bi @am.IconClass sn-link-accent" aria-hidden="true"></i>
                                             <span class="text-truncate">@am.Name</span>
                                         </label>
                                     </div>
@@ -127,13 +105,16 @@
         </form>
     </section>
 
-    <!-- Collapsible Spatial Leaflet Map View -->
+    <!-- Collapsible Spatial Map View (Leaflet lazy-loaded on demand) -->
     <div id="discoveryMapWrap" class="sn-card p-2 mb-4 d-none">
         <div id="discoveryMap" style="height:380px;border-radius:12px;"></div>
     </div>
 
     <!-- Live AJAX Results Container -->
-    <div id="catalogResults">
+    <div id="catalogStatusError" class="alert sn-alert sn-alert-danger d-none mb-3" role="alert">
+        Unable to refresh listings right now. Please try again.
+    </div>
+    <div id="catalogResults" aria-live="polite" aria-busy="false">
         <partial name="_PropertyCatalogGrid" model="Model" />
     </div>
 </div>
@@ -142,9 +123,29 @@
     <script>
         let discoveryMap = null;
         let mapMarkers = [];
+        let leafletPromise = null;
+
+        // Lazy-load Leaflet CSS & JS only when user opens the map (saves 162 KB on initial load)
+        function ensureLeaflet() {
+            if (window.L) return Promise.resolve();
+            if (leafletPromise) return leafletPromise;
+            leafletPromise = new Promise((resolve, reject) => {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                document.head.appendChild(link);
+
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.body.appendChild(script);
+            });
+            return leafletPromise;
+        }
 
         function renderDiscoveryMarkers() {
-            if (!discoveryMap) return;
+            if (!discoveryMap || !window.L) return;
             mapMarkers.forEach(m => discoveryMap.removeLayer(m));
             mapMarkers = [];
 
@@ -161,13 +162,13 @@
                 });
                 const marker = L.marker([p.lat, p.lng], { icon }).addTo(discoveryMap);
                 marker.bindPopup(`
-                        <div style="width:200px">
-                            <img src="${p.photo}" style="width:100%;height:110px;object-fit:cover;border-radius:8px;margin-bottom:6px"/>
-                            <div style="font-weight:700;font-size:13px">${p.title}</div>
-                            <div style="color:#6b7280;font-size:12px">${p.city} · ${p.price}/night</div>
-                            <a href="/Property/Details/${p.id}" style="display:inline-block;margin-top:6px;color:#ff385c;font-weight:700;font-size:12px">View Stay →</a>
-                        </div>
-                    `);
+                    <div style="width:200px">
+                        <img src="${p.photo}" alt="${p.title}" width="200" height="110" style="width:100%;height:110px;object-fit:cover;border-radius:8px;margin-bottom:6px"/>
+                        <div style="font-weight:700;font-size:13px">${p.title}</div>
+                        <div style="color:#525866;font-size:12px">${p.city} · ${p.price}/night</div>
+                        <a href="${p.url}" style="display:inline-block;margin-top:6px;color:#c81942;font-weight:700;font-size:12px">View Stay</a>
+                    </div>
+                `);
                 mapMarkers.push(marker);
                 bounds.push([p.lat, p.lng]);
             });
@@ -175,17 +176,25 @@
             if (bounds.length > 0) discoveryMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 12 });
         }
 
-        document.getElementById('toggleMapBtn')?.addEventListener('click', () => {
+        document.getElementById('toggleMapBtn')?.addEventListener('click', async () => {
             const wrap = document.getElementById('discoveryMapWrap');
+            const btn = document.getElementById('toggleMapBtn');
+            const lbl = document.getElementById('toggleMapLabel');
+            const willOpen = wrap.classList.contains('d-none');
+
             wrap.classList.toggle('d-none');
-            if (!wrap.classList.contains('d-none')) {
+            btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            lbl.textContent = willOpen ? 'Hide Map' : 'Show Map';
+
+            if (willOpen) {
+                await ensureLeaflet();
                 if (!discoveryMap) {
                     discoveryMap = L.map('discoveryMap').setView([4.2105, 101.9758], 6);
                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         attribution: '&copy; OpenStreetMap contributors'
                     }).addTo(discoveryMap);
                 }
-                setTimeout(() => { discoveryMap.invalidateSize(); renderDiscoveryMarkers(); }, 120);
+                setTimeout(() => { discoveryMap.invalidateSize(); renderDiscoveryMarkers(); }, 100);
             }
         });
 
@@ -194,11 +203,35 @@
             if (resetPage) document.getElementById('searchPage').value = 1;
             const form = document.getElementById('searchForm');
             const params = new URLSearchParams(new FormData(form));
-            const res = await fetch('/Property/SearchAjax?' + params.toString());
-            if (!res.ok) return;
-            document.getElementById('catalogResults').innerHTML = await res.text();
-            document.getElementById('amenityCount').textContent = document.querySelectorAll('.amenity-cb:checked').length;
-            renderDiscoveryMarkers();
+            const resultsEl = document.getElementById('catalogResults');
+            const errEl = document.getElementById('catalogStatusError');
+
+            // Sync filters into URL so browser Back preserves user's search
+            const cleanParams = new URLSearchParams();
+            for (const [k, v] of params.entries()) {
+                if (v && !(k === 'Page' && v === '1') && !(k === 'SortBy' && v === 'featured')) {
+                    cleanParams.append(k, v);
+                }
+            }
+            const nextUrl = cleanParams.toString() ? `/Property/Catalog?${cleanParams}` : '/';
+            window.history.replaceState(null, '', nextUrl);
+
+            resultsEl.setAttribute('aria-busy', 'true');
+            resultsEl.style.opacity = '0.55';
+            errEl.classList.add('d-none');
+
+            try {
+                const res = await fetch('/Property/SearchAjax?' + params.toString());
+                if (!res.ok) throw new Error('Search failed');
+                resultsEl.innerHTML = await res.text();
+                document.getElementById('amenityCount').textContent = document.querySelectorAll('.amenity-cb:checked').length;
+                renderDiscoveryMarkers();
+            } catch {
+                errEl.classList.remove('d-none');
+            } finally {
+                resultsEl.style.opacity = '1';
+                resultsEl.setAttribute('aria-busy', 'false');
+            }
         }
 
         document.getElementById('searchForm')?.addEventListener('submit', e => {
@@ -208,7 +241,7 @@
 
         document.getElementById('searchQuery')?.addEventListener('input', () => {
             clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => runAjaxSearch(true), 280);
+            debounceTimer = setTimeout(() => runAjaxSearch(true), 260);
         });
 
         document.querySelectorAll('.ajax-trigger').forEach(el => {
@@ -221,7 +254,8 @@
             e.preventDefault();
             document.getElementById('searchPage').value = pg.dataset.page;
             runAjaxSearch(false);
-            window.scrollTo({ top: 180, behavior: 'smooth' });
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            window.scrollTo({ top: 180, behavior: reduceMotion ? 'auto' : 'smooth' });
         });
     </script>
 }

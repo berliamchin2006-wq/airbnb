@@ -1,15 +1,6 @@
-const CACHE_NAME = 'staynest-v1';
-const OFFLINE_ASSETS = [
-  '/',
-  '/css/site.css',
-  '/js/site.js',
-  '/manifest.json'
-];
+const CACHE_NAME = 'staynest-v2';
 
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(OFFLINE_ASSETS).catch(() => {}))
-  );
+self.addEventListener('install', () => {
   self.skipWaiting();
 });
 
@@ -24,7 +15,19 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
+
+  // Network-first with passive runtime caching (avoids unversioned double-fetch on first load)
   event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
+    fetch(event.request)
+      .then(response => {
+        if (response.ok && (url.pathname.startsWith('/css/') || url.pathname.startsWith('/js/') || url.pathname.startsWith('/images/'))) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)).catch(() => {});
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });

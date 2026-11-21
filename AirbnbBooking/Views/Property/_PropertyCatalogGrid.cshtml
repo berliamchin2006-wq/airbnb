@@ -2,9 +2,14 @@
 @inject Helper Helper
 @using System.Text.Json
 @{
+    string? ciParam = Model.CheckIn?.ToString("yyyy-MM-dd");
+    string? coParam = Model.CheckOut?.ToString("yyyy-MM-dd");
+    int? guestsParam = Model.Guests;
+
     var mapPins = Model.Results.Select(p =>
     {
         var cover = p.Photos.OrderByDescending(ph => ph.IsPrimary).ThenBy(ph => ph.DisplayOrder).FirstOrDefault()?.FileName;
+        var detailUrl = Url.Action("Details", "Property", new { id = p.Id, checkIn = ciParam, checkOut = coParam, guests = guestsParam }) ?? $"/Property/Details/{p.Id}";
         return new
         {
             id = p.Id,
@@ -13,7 +18,8 @@
             lat = p.Latitude,
             lng = p.Longitude,
             price = Helper.FormatMoney(p.BaseNightlyRate),
-            photo = Helper.ResolvePhotoUrl(cover, "properties")
+            photo = Helper.ResolveOptimizedPhotoUrl(cover, "properties", 420, 260),
+            url = detailUrl
         };
     }).ToList();
 }
@@ -22,11 +28,11 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div class="small text-muted">
-        Showing <strong class="text-body">@Model.Results.Count</strong> of <strong class="text-body">@Model.TotalCount</strong> available stay(s)
+        Showing <strong class="text-body sn-num">@Model.Results.Count</strong> of <strong class="text-body sn-num">@Model.TotalCount</strong> available @(Model.TotalCount == 1 ? "stay" : "stays")
         @if (Model.CheckIn.HasValue && Model.CheckOut.HasValue)
         {
             <span class="ms-2 badge bg-success-subtle text-success">
-                <i class="bi bi-calendar-check me-1"></i>Available @Model.CheckIn.Value.ToString("dd MMM") – @Model.CheckOut.Value.ToString("dd MMM")
+                <i class="bi bi-calendar-check me-1" aria-hidden="true"></i>Available @Model.CheckIn.Value.ToString("dd MMM") – @Model.CheckOut.Value.ToString("dd MMM")
             </span>
         }
     </div>
@@ -35,8 +41,8 @@
 @if (Model.Results.Count == 0)
 {
     <div class="sn-card p-5 text-center">
-        <i class="bi bi-house-slash display-5 text-muted"></i>
-        <h5 class="fw-bold mt-3">No properties match your current filters</h5>
+        <i class="bi bi-house-slash display-5 text-muted" aria-hidden="true"></i>
+        <h2 class="h5 fw-bold mt-3">No properties match your current filters</h2>
         <p class="text-muted small">Try clearing dates, lowering guest count, or widening your price range.</p>
         <a asp-action="Catalog" class="btn sn-btn-primary btn-sm">Clear All Filters</a>
     </div>
@@ -44,46 +50,59 @@
 else
 {
     <div class="row g-4">
+        @{ int cardIndex = 0; }
         @foreach (var p in Model.Results)
         {
             var cover = p.Photos.OrderByDescending(ph => ph.IsPrimary).ThenBy(ph => ph.DisplayOrder).FirstOrDefault()?.FileName;
-            string coverUrl = Helper.ResolvePhotoUrl(cover, "properties");
+            string coverUrl = Helper.ResolveOptimizedPhotoUrl(cover, "properties", 640, 480);
+            string coverSm = Helper.ResolveOptimizedPhotoUrl(cover, "properties", 420, 315);
             bool saved = Model.WishlistedPropertyIds.Contains(p.Id);
+            bool isAboveFold = cardIndex < 3;
+            cardIndex++;
 
             <div class="col-md-6 col-lg-4">
                 <article class="sn-prop-card">
                     <div class="sn-prop-media">
-                        <a asp-action="Details" asp-route-id="@p.Id">
-                            <img src="@coverUrl" alt="@p.Title" loading="lazy" />
+                        <a asp-action="Details" asp-route-id="@p.Id" asp-route-checkIn="@ciParam" asp-route-checkOut="@coParam" asp-route-guests="@guestsParam">
+                            @if (isAboveFold)
+                            {
+                                <img src="@coverUrl" srcset="@coverSm 420w, @coverUrl 640w" sizes="(max-width:767px) 92vw, 33vw" alt="@p.Title" width="640" height="480" fetchpriority="high" decoding="async" />
+                            }
+                            else
+                            {
+                                <img src="@coverUrl" srcset="@coverSm 420w, @coverUrl 640w" sizes="(max-width:767px) 92vw, 33vw" alt="@p.Title" width="640" height="480" loading="lazy" decoding="async" />
+                            }
                         </a>
                         <span class="sn-prop-tag">@p.PropertyType</span>
-                        <button type="button" class="sn-wish-btn @(saved ? "saved" : "")" data-property-id="@p.Id" title="Save to Wishlist">
-                            <i class="bi @(saved ? "bi-heart-fill" : "bi-heart")"></i>
+                        <button type="button" class="sn-wish-btn @(saved ? "saved" : "")" data-property-id="@p.Id" aria-label="@(saved ? $"Remove {p.Title} from saved stays" : $"Save {p.Title} to wishlist")" aria-pressed="@(saved ? "true" : "false")" title="Save to Wishlist">
+                            <i class="bi @(saved ? "bi-heart-fill" : "bi-heart")" aria-hidden="true"></i>
                         </button>
                     </div>
                     <div class="p-3 d-flex flex-column flex-grow-1">
                         <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
                             <div class="small text-muted fw-medium">@p.City, @p.State</div>
-                            <div class="small fw-semibold flex-shrink-0">
-                                <i class="bi bi-star-fill text-warning me-1"></i>@(p.ReviewCount > 0 ? $"{p.AverageRating:0.0} ({p.ReviewCount})" : "New")
+                            <div class="small fw-semibold flex-shrink-0 sn-num">
+                                <i class="bi bi-star-fill text-warning me-1" aria-hidden="true"></i>@(p.ReviewCount > 0 ? $"{p.AverageRating:0.0} ({p.ReviewCount})" : "New")
                             </div>
                         </div>
-                        <a asp-action="Details" asp-route-id="@p.Id" class="text-decoration-none text-reset">
-                            <h6 class="fw-bold mb-2">@p.Title</h6>
+                        <a asp-action="Details" asp-route-id="@p.Id" asp-route-checkIn="@ciParam" asp-route-checkOut="@coParam" asp-route-guests="@guestsParam" class="text-decoration-none text-reset">
+                            <h2 class="h6 fw-bold mb-2">@p.Title</h2>
                         </a>
                         <div class="small text-muted mb-3">
-                            <span>@p.MaxGuests guests</span> · <span>@p.Bedrooms bd</span> · <span>@p.Bathrooms ba</span>
+                            <span>@p.MaxGuests @(p.MaxGuests == 1 ? "guest" : "guests")</span> · <span>@p.Bedrooms bd</span> · <span>@p.Bathrooms ba</span>
                             @if (p.SeasonalRates.Any())
                             {
                                 <span class="badge bg-warning-subtle text-warning-emphasis ms-1">Seasonal Pricing</span>
                             }
                         </div>
                         <div class="mt-auto pt-2 border-top d-flex justify-content-between align-items-center">
-                            <div>
+                            <div class="sn-num">
                                 <span class="fw-bold fs-6">@Helper.FormatMoney(p.BaseNightlyRate)</span>
                                 <span class="small text-muted">/ night</span>
                             </div>
-                            <a asp-action="Details" asp-route-id="@p.Id" class="btn btn-sm sn-btn-ghost">Explore →</a>
+                            <a asp-action="Details" asp-route-id="@p.Id" asp-route-checkIn="@ciParam" asp-route-checkOut="@coParam" asp-route-guests="@guestsParam" class="btn btn-sm sn-btn-ghost">
+                                Explore<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
+                            </a>
                         </div>
                     </div>
                 </article>
@@ -93,7 +112,7 @@ else
 
     @if (Model.TotalPages > 1)
     {
-        <nav class="mt-4 d-flex justify-content-center">
+        <nav class="mt-4 d-flex justify-content-center" aria-label="Property catalog pagination">
             <ul class="pagination pagination-sm">
                 @for (int i = 1; i <= Model.TotalPages; i++)
                 {

@@ -7,18 +7,19 @@
 <div class="container-xl py-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
         <div>
-            <span class="sn-eyebrow">Module 7 · Host Analytics &amp; Reporting</span>
-            <h2 class="fw-bold mt-1 mb-0">Host Performance Dashboard</h2>
+            <h1 class="h2 fw-bold mb-1">Host Performance Dashboard</h1>
+            <p class="small text-muted mb-0">Live occupancy, payout earnings, and reservation activity across your listings.</p>
         </div>
         <div class="d-flex flex-wrap gap-2 align-items-center">
+            <label for="hostRangeSel" class="visually-hidden">Reporting Date Range</label>
             <select id="hostRangeSel" class="form-select form-select-sm" style="width:auto">
                 <option value="30" selected="@(Model.RangeDays == 30)">Last 30 Days</option>
                 <option value="90" selected="@(Model.RangeDays == 90)">Last 90 Days</option>
                 <option value="180" selected="@(Model.RangeDays == 180)">Last 180 Days</option>
                 <option value="365" selected="@(Model.RangeDays == 365)">Last 12 Months</option>
             </select>
-            <a asp-action="ExportHostReportCsv" class="btn sn-btn-dark btn-sm"><i class="bi bi-download me-1"></i>CSV Report</a>
-            <button type="button" onclick="window.print()" class="btn sn-btn-ghost btn-sm no-print"><i class="bi bi-printer me-1"></i>Print PDF</button>
+            <a asp-action="ExportHostReportCsv" class="btn sn-btn-dark btn-sm"><i class="bi bi-download me-1" aria-hidden="true"></i>CSV Report</a>
+            <button type="button" onclick="window.print()" class="btn sn-btn-ghost btn-sm no-print"><i class="bi bi-printer me-1" aria-hidden="true"></i>Print PDF</button>
         </div>
     </div>
 
@@ -26,30 +27,30 @@
     <div class="row g-3 mb-4">
         <div class="col-6 col-lg-3">
             <div class="sn-kpi">
-                <div class="d-flex justify-content-between"><span class="small text-muted">Occupancy Rate</span><span class="sn-kpi-icon"><i class="bi bi-calendar-check"></i></span></div>
+                <div class="d-flex justify-content-between"><span class="small text-muted">Occupancy Rate</span><span class="sn-kpi-icon" aria-hidden="true"><i class="bi bi-calendar-check"></i></span></div>
                 <div class="fs-3 fw-bold mt-2" id="kpiOcc">@Model.OccupancyRatePercent%</div>
                 <div class="small text-muted">@Model.ActiveListings/@Model.TotalListings active listings</div>
             </div>
         </div>
         <div class="col-6 col-lg-3">
             <div class="sn-kpi">
-                <div class="d-flex justify-content-between"><span class="small text-muted">Net Host Earnings</span><span class="sn-kpi-icon"><i class="bi bi-cash-coin"></i></span></div>
-                <div class="fs-3 fw-bold mt-2 text-success">@Helper.FormatMoney(Model.TotalNetPayouts)</div>
-                <div class="small text-muted">Pending payout: @Helper.FormatMoney(Model.PendingPayoutAmount)</div>
+                <div class="d-flex justify-content-between"><span class="small text-muted">Net Host Earnings</span><span class="sn-kpi-icon" aria-hidden="true"><i class="bi bi-cash-coin"></i></span></div>
+                <div class="fs-3 fw-bold mt-2 text-success" id="kpiNet">@Helper.FormatMoney(Model.TotalNetPayouts)</div>
+                <div class="small text-muted">Pending payout: <span id="kpiPending">@Helper.FormatMoney(Model.PendingPayoutAmount)</span></div>
             </div>
         </div>
         <div class="col-6 col-lg-3">
             <div class="sn-kpi">
-                <div class="d-flex justify-content-between"><span class="small text-muted">Total Reservations</span><span class="sn-kpi-icon"><i class="bi bi-suitcase-lg"></i></span></div>
-                <div class="fs-3 fw-bold mt-2">@Model.TotalBookings</div>
-                <div class="small text-muted">@Model.ActiveStaysCount guest(s) currently checked in</div>
+                <div class="d-flex justify-content-between"><span class="small text-muted">Total Reservations</span><span class="sn-kpi-icon" aria-hidden="true"><i class="bi bi-suitcase-lg"></i></span></div>
+                <div class="fs-3 fw-bold mt-2" id="kpiBookings">@Model.TotalBookings</div>
+                <div class="small text-muted">@Model.ActiveStaysCount @(Model.ActiveStaysCount == 1 ? "guest" : "guests") checked in</div>
             </div>
         </div>
         <div class="col-6 col-lg-3">
             <div class="sn-kpi">
-                <div class="d-flex justify-content-between"><span class="small text-muted">Reputation Score</span><span class="sn-kpi-icon"><i class="bi bi-star-fill"></i></span></div>
-                <div class="fs-3 fw-bold mt-2">★ @(Model.AverageHostRating > 0 ? Model.AverageHostRating.ToString("0.00") : "N/A")</div>
-                <div class="small text-muted">@Model.OpenServiceRequests open service request(s)</div>
+                <div class="d-flex justify-content-between"><span class="small text-muted">Reputation Score</span><span class="sn-kpi-icon" aria-hidden="true"><i class="bi bi-star-fill"></i></span></div>
+                <div class="fs-3 fw-bold mt-2"><i class="bi bi-star-fill text-warning me-1 fs-5" aria-hidden="true"></i>@(Model.AverageHostRating > 0 ? Model.AverageHostRating.ToString("0.00") : "N/A")</div>
+                <div class="small text-muted">@Model.OpenServiceRequests open @(Model.OpenServiceRequests == 1 ? "request" : "requests")</div>
             </div>
         </div>
     </div>
@@ -58,13 +59,13 @@
     <div class="row g-4 mb-4">
         <div class="col-lg-8">
             <div class="sn-card p-4 h-100">
-                <h5 class="fw-bold mb-3">Monthly Earnings &amp; Booking Volume (6 Months)</h5>
+                <h2 class="h5 fw-bold mb-3">Monthly Earnings &amp; Booking Volume (<span id="chartRangeLbl">Last @Model.RangeDays Days</span>)</h2>
                 <canvas id="hostEarningsChart" height="115"></canvas>
             </div>
         </div>
         <div class="col-lg-4">
             <div class="sn-card p-4 h-100">
-                <h5 class="fw-bold mb-3">Booking Status Mix</h5>
+                <h2 class="h5 fw-bold mb-3">Booking Status Mix</h2>
                 <canvas id="hostStatusChart" height="210"></canvas>
             </div>
         </div>
@@ -73,8 +74,8 @@
     <!-- Recent Bookings -->
     <div class="sn-card p-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="fw-bold mb-0">Recent Reservations</h5>
-            <a asp-controller="Booking" asp-action="HostBookings" class="small text-decoration-none fw-semibold" style="color:var(--sn-accent)">View All →</a>
+            <h2 class="h5 fw-bold mb-0">Recent Reservations</h2>
+            <a asp-controller="Booking" asp-action="HostBookings" class="small text-decoration-none fw-semibold sn-link-accent">View All<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
         </div>
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
@@ -100,7 +101,11 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <script>
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const lineInk = isDark ? '#e5e7eb' : '#111827';
+
         const earnChart = new Chart(document.getElementById('hostEarningsChart'), {
             type: 'bar',
             data: {
@@ -109,7 +114,7 @@
                     {
                         label: 'Net Earnings (MYR)',
                         data: @Html.Raw(JsonSerializer.Serialize(Model.MonthlyEarnings)),
-                        backgroundColor: 'rgba(255, 56, 92, 0.82)',
+                        backgroundColor: 'rgba(200, 25, 66, 0.85)',
                         borderRadius: 8
                     },
                     {
@@ -117,7 +122,7 @@
                         type: 'line',
                         yAxisID: 'y1',
                         data: @Html.Raw(JsonSerializer.Serialize(Model.MonthlyBookingCounts)),
-                        borderColor: '#111827',
+                        borderColor: lineInk,
                         tension: 0.35
                     }
                 ]
@@ -138,21 +143,37 @@
                 labels: Object.keys(statusDist),
                 datasets: [{
                     data: Object.values(statusDist),
-                    backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444']
+                    backgroundColor: ['#d97706', '#2563eb', '#059669', '#7c3aed', '#dc2626']
                 }]
             },
             options: { plugins: { legend: { position: 'bottom' } } }
         });
 
-        // AJAX Range Selector Refresh
+        // Atomic AJAX Range Selector Refresh (updates KPIs + BOTH charts + heading)
         document.getElementById('hostRangeSel')?.addEventListener('change', async e => {
-            const res = await fetch(`/Dashboard/HostChartData?rangeDays=${e.target.value}`);
-            const data = await res.json();
-            document.getElementById('kpiOcc').textContent = data.occupancyRate + '%';
-            earnChart.data.labels = data.labels;
-            earnChart.data.datasets[0].data = data.earnings;
-            earnChart.data.datasets[1].data = data.bookings;
-            earnChart.update();
+            const sel = e.target;
+            sel.disabled = true;
+            try {
+                const res = await fetch(`/Dashboard/HostChartData?rangeDays=${sel.value}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                document.getElementById('kpiOcc').textContent = data.occupancyRate + '%';
+                document.getElementById('kpiNet').textContent = data.totalNetFormatted;
+                document.getElementById('kpiPending').textContent = data.pendingFormatted;
+                document.getElementById('kpiBookings').textContent = data.totalBookings;
+                document.getElementById('chartRangeLbl').textContent = data.rangeLabel;
+
+                earnChart.data.labels = data.labels;
+                earnChart.data.datasets[0].data = data.earnings;
+                earnChart.data.datasets[1].data = data.bookings;
+                earnChart.update();
+
+                statusChart.data.labels = Object.keys(data.statusDist);
+                statusChart.data.datasets[0].data = Object.values(data.statusDist);
+                statusChart.update();
+            } finally {
+                sel.disabled = false;
+            }
         });
     </script>
 }

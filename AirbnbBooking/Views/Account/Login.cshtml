@@ -7,15 +7,14 @@
     <div class="row justify-content-center">
         <div class="col-md-6 col-lg-5">
             <div class="sn-card p-4 p-md-5">
-                <span class="sn-eyebrow">Module 1 · Secure Auth</span>
-                <h2 class="fw-bold mt-2 mb-1">Welcome back</h2>
-                <p class="text-muted small mb-4">Manual cookie auth + rotating session tokens + 3-strike lockout.</p>
+                <h1 class="h2 fw-bold mb-1">Welcome back</h1>
+                <p class="text-muted small mb-4">Sign in to manage your trips, wishlists, or host listings.</p>
 
                 @if (lockoutSec > 0)
                 {
-                    <div class="alert sn-alert sn-alert-danger mb-3">
-                        <i class="bi bi-lock-fill me-2"></i>Account temporarily locked. Time remaining:
-                        <strong id="lockCountdown">@lockoutSec</strong>s
+                    <div class="alert sn-alert sn-alert-danger mb-3" role="alert">
+                        <i class="bi bi-lock-fill me-2" aria-hidden="true"></i>Account temporarily locked. Time remaining:
+                        <strong id="lockCountdown" class="sn-num">@lockoutSec</strong>s
                     </div>
                 }
 
@@ -33,21 +32,21 @@
                     <div class="mb-3">
                         <div class="d-flex justify-content-between">
                             <label asp-for="Password" class="form-label small fw-semibold"></label>
-                            <a asp-action="ForgotPassword" class="small text-decoration-none" style="color:var(--sn-accent)">Forgot password?</a>
+                            <a asp-action="ForgotPassword" class="small text-decoration-none sn-link-accent fw-medium">Forgot password?</a>
                         </div>
-                        <input asp-for="Password" class="form-control" placeholder="••••••••" autocomplete="current-password" />
+                        <input asp-for="Password" class="form-control" placeholder="Enter your password" autocomplete="current-password" />
                         <span asp-validation-for="Password" class="text-danger small"></span>
                     </div>
 
                     <!-- Self-Coded Anti-Bot CAPTCHA -->
                     <div class="mb-3">
-                        <label asp-for="CaptchaAnswer" class="form-label small fw-semibold">Anti-Bot Verification</label>
+                        <label asp-for="CaptchaAnswer" class="form-label small fw-semibold">Security Check</label>
                         <div class="d-flex align-items-center gap-2">
-                            <div class="sn-soft-box px-3 py-2 fw-bold font-monospace flex-shrink-0" id="captchaText" style="letter-spacing:2px">
+                            <div class="sn-soft-box px-3 py-2 fw-bold font-monospace flex-shrink-0 sn-num" id="captchaText" style="letter-spacing:2px">
                                 @ViewBag.CaptchaQuestion
                             </div>
-                            <button type="button" id="refreshCaptchaBtn" class="btn btn-sm sn-btn-ghost" title="New Challenge">
-                                <i class="bi bi-arrow-clockwise"></i>
+                            <button type="button" id="refreshCaptchaBtn" class="btn sn-btn-ghost flex-shrink-0" aria-label="Generate a new security check question" title="New Challenge">
+                                <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
                             </button>
                             <input asp-for="CaptchaAnswer" class="form-control" placeholder="Answer" autocomplete="off" />
                         </div>
@@ -56,25 +55,28 @@
 
                     <div class="form-check mb-4">
                         <input asp-for="RememberMe" class="form-check-input" />
-                        <label asp-for="RememberMe" class="form-check-label small text-muted"></label>
+                        <label asp-for="RememberMe" class="form-check-label small text-muted">Keep me signed in on this device</label>
                     </div>
 
                     <button type="submit" class="btn sn-btn-primary w-100 py-2">Sign In</button>
                 </form>
 
-                <!-- Quick Demo Account Switcher -->
-                <div class="sn-soft-box p-3 mt-4">
-                    <div class="small fw-semibold mb-2"><i class="bi bi-lightning-charge text-danger me-1"></i>Demo Accounts (Password: <code>Password123!</code>)</div>
+                <!-- Discreet Collapsible Demo Accounts Switcher -->
+                <details class="sn-soft-box p-3 mt-4">
+                    <summary class="small fw-semibold" style="cursor:pointer">
+                        <i class="bi bi-lightning-charge sn-link-accent me-1" aria-hidden="true"></i>Quick-fill Demo Accounts
+                    </summary>
+                    <div class="small text-muted mt-2 mb-2">Shared password: <code>Password123!</code></div>
                     <div class="d-flex flex-wrap gap-2">
                         <button type="button" class="btn btn-sm sn-btn-ghost demo-fill" data-email="guest1@staynest.my">Guest (Nurul)</button>
                         <button type="button" class="btn btn-sm sn-btn-ghost demo-fill" data-email="host1@staynest.my">Host (Tan)</button>
                         <button type="button" class="btn btn-sm sn-btn-ghost demo-fill" data-email="host2@staynest.my">Host 2 (Lim)</button>
                         <button type="button" class="btn btn-sm sn-btn-ghost demo-fill" data-email="admin@staynest.my">Admin</button>
                     </div>
-                </div>
+                </details>
 
                 <p class="text-center small text-muted mt-4 mb-0">
-                    New to StayNest? <a asp-action="Register" class="fw-semibold text-decoration-none" style="color:var(--sn-accent)">Create an account</a>
+                    New to StayNest? <a asp-action="Register" class="fw-semibold text-decoration-none sn-link-accent">Create an account</a>
                 </p>
             </div>
         </div>

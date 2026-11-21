@@ -70,20 +70,23 @@ namespace AirbnbBooking.Controllers
                 return Json(new { ok = false, error = "Selected dates overlap with an existing reservation. Please choose different dates." });
 
             PromoCode? promo = null;
+            bool promoNotFound = false;
             if (!string.IsNullOrWhiteSpace(promoCode))
             {
                 string code = promoCode.Trim().ToUpperInvariant();
                 promo = await _db.PromoCodes.FirstOrDefaultAsync(c => c.Code.ToUpper() == code);
-                if (promo == null)
-                    return Json(new { ok = true, available = true, promoInvalid = true, promoMessage = "Promo code not found." });
+                if (promo == null) promoNotFound = true;
             }
 
             var calc = _pricing.CalculateBookingPrice(prop, prop.SeasonalRates, checkIn, checkOut, promo);
+            string activeCurrency = _helper.GetActiveCurrency();
+            string? promoMsg = promoNotFound ? "Promo code not found." : calc.PromoMessage;
 
             return Json(new
             {
                 ok = true,
                 available = true,
+                currency = activeCurrency,
                 nights = calc.Nights,
                 avgNightly = calc.AverageNightlyRate,
                 subtotal = calc.SubtotalAmount,
@@ -91,8 +94,14 @@ namespace AirbnbBooking.Controllers
                 serviceTax = calc.ServiceTax,
                 discount = calc.DiscountAmount,
                 total = calc.TotalAmount,
+                subtotalFormatted = _helper.FormatMoney(calc.SubtotalAmount, activeCurrency),
+                cleaningFeeFormatted = _helper.FormatMoney(calc.CleaningFee, activeCurrency),
+                serviceTaxFormatted = _helper.FormatMoney(calc.ServiceTax, activeCurrency),
+                discountFormatted = _helper.FormatMoney(calc.DiscountAmount, activeCurrency),
+                totalFormatted = _helper.FormatMoney(calc.TotalAmount, activeCurrency),
                 promoCode = calc.AppliedPromoCode,
-                promoMessage = calc.PromoMessage,
+                promoInvalid = promoNotFound,
+                promoMessage = promoMsg,
                 nightly = calc.NightlyBreakdown.Select(n => new { date = n.Date.ToString("dd MMM"), rate = n.Rate, label = n.RateLabel })
             });
         }

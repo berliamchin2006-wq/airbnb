@@ -5,7 +5,9 @@ using AirbnbBooking.Middleware;
 using AirbnbBooking.Models;
 using AirbnbBooking.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
+using System.IO.Compression;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +22,17 @@ AppDomain.CurrentDomain.SetData("DataDirectory", appDataPath);
 string rawConn = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Server=(LocalDB)\\MSSQLLocalDB;AttachDbFilename=|DataDirectory|\\AirbnbBookingDb.mdf;Database=AirbnbBookingDb;Trusted_Connection=True;MultipleActiveResultSets=True;TrustServerCertificate=True";
 string resolvedConn = rawConn.Replace("|DataDirectory|", appDataPath);
+
+// Brotli + Gzip HTTP Response Compression
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(["image/svg+xml"]);
+});
+builder.Services.Configure<BrotliCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
+builder.Services.Configure<GzipCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
 
 // MVC & SignalR
 builder.Services.AddControllersWithViews();
@@ -95,7 +108,17 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
-app.UseStaticFiles();
+app.UseResponseCompression();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        bool versioned = ctx.Context.Request.Query.ContainsKey("v");
+        ctx.Context.Response.Headers.CacheControl = versioned
+            ? "public,max-age=31536000,immutable"
+            : "public,max-age=86400";
+    }
+});
 app.UseRouting();
 
 // Module 8: Sliding-Window Rate Limiting & Brute-Force Protection Middleware

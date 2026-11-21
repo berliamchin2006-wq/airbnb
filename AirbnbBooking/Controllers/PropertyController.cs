@@ -149,7 +149,7 @@ namespace AirbnbBooking.Controllers
         // Property Detail View (Gallery, Map, Seasonal Rates, Reviews, Booking Widget)
         // =====================================================================
         [HttpGet]
-        public async Task<IActionResult> Details(int id)
+        public async Task<IActionResult> Details(int id, DateTime? checkIn = null, DateTime? checkOut = null, int? guests = null)
         {
             await _helper.SyncReviewVisibilityAndAggregateAsync(_db, id);
 
@@ -172,6 +172,10 @@ namespace AirbnbBooking.Controllers
             var uid = _helper.GetCurrentUserId();
             bool isWishlisted = uid.HasValue && await _db.Wishlists.AnyAsync(w => w.GuestId == uid.Value && w.PropertyId == id);
 
+            var defaultIn = checkIn.HasValue && checkIn.Value.Date >= DateTime.Today ? checkIn.Value.Date : DateTime.Today.AddDays(3);
+            var defaultOut = checkOut.HasValue && checkOut.Value.Date > defaultIn ? checkOut.Value.Date : defaultIn.AddDays(3);
+            int defaultGuests = guests.HasValue && guests.Value >= 1 ? Math.Min(guests.Value, prop.MaxGuests) : Math.Min(2, prop.MaxGuests);
+
             var vm = new PropertyDetailViewModel
             {
                 Property = prop,
@@ -184,9 +188,9 @@ namespace AirbnbBooking.Controllers
                 BookingForm = new BookingCreateViewModel
                 {
                     PropertyId = prop.Id,
-                    CheckInDate = DateTime.Today.AddDays(3),
-                    CheckOutDate = DateTime.Today.AddDays(6),
-                    GuestCount = Math.Min(2, prop.MaxGuests)
+                    CheckInDate = defaultIn,
+                    CheckOutDate = defaultOut,
+                    GuestCount = defaultGuests
                 }
             };
 
