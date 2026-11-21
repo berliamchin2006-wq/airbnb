@@ -1,0 +1,437 @@
+@model PropertyDetailViewModel
+@inject Helper Helper
+@{
+    var p = Model.Property;
+    ViewData["Title"] = p.Title;
+    var photos = p.Photos.OrderByDescending(ph => ph.IsPrimary).ThenBy(ph => ph.DisplayOrder).ToList();
+    string mainImg = Helper.ResolvePhotoUrl(photos.FirstOrDefault()?.FileName, "properties");
+}
+<div class="container-xl py-4">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="sn-eyebrow">@p.PropertyType</span>
+                <span class="badge bg-light text-dark border">@p.CancellationPolicy Cancellation</span>
+            </div>
+            <h1 class="h3 fw-bold mb-1">@p.Title</h1>
+            <div class="small text-muted d-flex flex-wrap gap-3">
+                <span><i class="bi bi-star-fill text-warning me-1"></i><strong>@(p.ReviewCount > 0 ? p.AverageRating.ToString("0.00") : "New")</strong> (@p.ReviewCount review@(p.ReviewCount == 1 ? "" : "s"))</span>
+                <span><i class="bi bi-geo-alt-fill text-danger me-1"></i>@p.Address, @p.City, @p.State</span>
+                <span>Hosted by <strong>@p.Host.FullName</strong> @(p.Host.IdentityStatus == "Verified" ? "✓ Verified" : "")</span>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn sn-btn-ghost btn-sm sn-wish-btn position-static rounded-pill px-3 @(Model.IsWishlisted ? "saved" : "")" style="width:auto;height:auto;box-shadow:none" data-property-id="@p.Id">
+                <i class="bi @(Model.IsWishlisted ? "bi-heart-fill" : "bi-heart") me-1"></i>Save
+            </button>
+            @if (Helper.IsOwnerOrAdmin(p.HostId))
+            {
+                <a asp-action="Edit" asp-route-id="@p.Id" class="btn sn-btn-dark btn-sm"><i class="bi bi-pencil me-1"></i>Edit Listing</a>
+            }
+        </div>
+    </div>
+
+    <!-- Multi-Photo Gallery -->
+    <div class="sn-gallery mb-4">
+        <img src="@mainImg" alt="@p.Title" class="sn-gallery-main" />
+        <div class="sn-gallery-side">
+            @for (int i = 1; i <= 2; i++)
+            {
+                var sidePhoto = photos.Count > i ? photos[i].FileName : photos.FirstOrDefault()?.FileName;
+                <img src="@Helper.ResolvePhotoUrl(sidePhoto, "properties")" alt="@p.Title photo @(i + 1)" />
+            }
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Content Column -->
+        <div class="col-lg-8">
+            <div class="sn-card p-4 mb-4">
+                <div class="d-flex flex-wrap gap-4 pb-3 mb-3 border-bottom small fw-semibold">
+                    <span><i class="bi bi-people me-1 text-danger"></i>Up to @p.MaxGuests guests</span>
+                    <span><i class="bi bi-door-closed me-1 text-danger"></i>@p.Bedrooms bedroom(s)</span>
+                    <span><i class="bi bi-moon me-1 text-danger"></i>@p.Beds bed(s)</span>
+                    <span><i class="bi bi-droplet me-1 text-danger"></i>@p.Bathrooms bathroom(s)</span>
+                </div>
+                <h5 class="fw-bold mb-2">About this space</h5>
+                <p class="text-muted mb-4" style="white-space:pre-line">@p.Description</p>
+
+                <h5 class="fw-bold mb-3">Amenities included</h5>
+                <div class="row g-2 mb-4">
+                    @foreach (var pa in p.PropertyAmenities)
+                    {
+                        <div class="col-6 col-md-4">
+                            <div class="sn-soft-box px-3 py-2 small d-flex align-items-center gap-2">
+                                <i class="bi @pa.Amenity.IconClass text-danger"></i>
+                                <span>@pa.Amenity.Name</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @if (p.SeasonalRates.Any())
+                {
+                    <h5 class="fw-bold mb-2">Custom Seasonal &amp; Holiday Rates</h5>
+                    <div class="table-responsive mb-4">
+                        <table class="table table-sm small mb-0">
+                            <thead><tr><th>Season</th><th>Dates</th><th>Nightly Rate</th></tr></thead>
+                            <tbody>
+                                @foreach (var sr in p.SeasonalRates)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">@sr.SeasonName</td>
+                                        <td>@sr.StartDate.ToString("dd MMM yyyy") – @sr.EndDate.ToString("dd MMM yyyy")</td>
+                                        <td class="fw-bold text-danger">@Helper.FormatMoney(sr.NightlyRate)/night</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                <div class="sn-soft-box p-3 small">
+                    <strong><i class="bi bi-clipboard-check text-danger me-1"></i>House Rules:</strong>
+                    <span class="text-muted ms-1">@p.HouseRules</span>
+                </div>
+            </div>
+
+            <!-- Interactive Location Map -->
+            <div class="sn-card p-4 mb-4">
+                <h5 class="fw-bold mb-2"><i class="bi bi-geo-alt text-danger me-1"></i>Location &amp; Neighborhood</h5>
+                <p class="small text-muted mb-3">@p.Address, @p.Postcode @p.City, @p.State (Coordinates: @p.Latitude.ToString("F4"), @p.Longitude.ToString("F4"))</p>
+                <div id="detailMap" style="height:280px;border-radius:12px;"></div>
+            </div>
+
+            <!-- Reviews & 4-Category Reputation Breakdown -->
+            <div class="sn-card p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-star-fill text-warning me-2"></i>@(p.ReviewCount > 0 ? $"{p.AverageRating:0.00} · {p.ReviewCount} Verified Reviews" : "Guest Reviews")</h5>
+                    <span class="small text-muted">Double-blind mutual review system</span>
+                </div>
+
+                @if (Model.PublishedReviews.Count > 0)
+                {
+                    <div class="row g-3 mb-4">
+                        @foreach (var metric in new[] { ("Cleanliness", Model.AvgCleanliness), ("Accuracy", Model.AvgAccuracy), ("Communication", Model.AvgCommunication), ("Location", Model.AvgLocation) })
+                        {
+                            <div class="col-6 col-md-3">
+                                <div class="sn-soft-box p-2 text-center">
+                                    <div class="small text-muted">@metric.Item1</div>
+                                    <div class="fw-bold fs-5">@metric.Item2.ToString("0.0")</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    @foreach (var rev in Model.PublishedReviews)
+                    {
+                        <div class="border-top pt-3 mt-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>@rev.Guest.FullName</strong>
+                                    <span class="small text-muted ms-2">@rev.CreatedAt.ToString("dd MMM yyyy")</span>
+                                </div>
+                                <span class="badge bg-warning-subtle text-warning-emphasis">★ @rev.OverallRating.ToString("0.0")</span>
+                            </div>
+                            <p class="small mt-2 mb-2">@rev.Comment</p>
+                            @if (!string.IsNullOrEmpty(rev.PhotoPath))
+                            {
+                                <img src="@Helper.ResolvePhotoUrl(rev.PhotoPath, "reviews")" alt="Review photo" class="rounded mb-2" style="max-height:130px" />
+                            }
+                            @if (!string.IsNullOrEmpty(rev.HostReply))
+                            {
+                                <div class="sn-soft-box p-2 px-3 small mb-2">
+                                    <strong>Host reply:</strong> @rev.HostReply
+                                </div>
+                            }
+                            <div class="d-flex align-items-center gap-3 small">
+                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-muted helpful-btn" data-id="@rev.Id">
+                                    <i class="bi bi-hand-thumbs-up me-1"></i>Helpful (<span class="vote-count">@rev.HelpfulVotes</span>)
+                                </button>
+                                @if (User.Identity?.IsAuthenticated == true)
+                                {
+                                    <form asp-controller="Review" asp-action="FlagReview" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@rev.Id" />
+                                        <input type="hidden" name="reason" value="Reported by user from listing page" />
+                                        <button type="submit" class="btn btn-link btn-sm p-0 text-decoration-none text-muted">Report</button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="small text-muted mb-0">No published reviews yet. Reviews appear automatically once both guest and host submit or after the 14-day blind review window.</p>
+                }
+            </div>
+        </div>
+
+        <!-- Sticky Booking & Live Price Calculator Widget (Module 3) -->
+        <div class="col-lg-4">
+            <div class="sn-card p-4 sticky-top" style="top:86px;z-index:20">
+                <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-1 mb-3">
+                    <div class="text-nowrap">
+                        <span class="fs-4 fw-bold">@Helper.FormatMoney(p.BaseNightlyRate)</span>
+                        <span class="small text-muted">/ night</span>
+                    </div>
+                    <span class="small text-muted text-nowrap">Wknd: @Helper.FormatMoney(p.CustomWeekendRate)</span>
+                </div>
+
+                <!-- Interactive Visual Availability Calendar (Self-Coded) -->
+                <div class="sn-soft-box p-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <button type="button" id="calPrev" class="btn btn-sm sn-btn-ghost py-0 px-2"><i class="bi bi-chevron-left"></i></button>
+                        <strong class="small" id="calMonthLabel"></strong>
+                        <button type="button" id="calNext" class="btn btn-sm sn-btn-ghost py-0 px-2"><i class="bi bi-chevron-right"></i></button>
+                    </div>
+                    <div class="d-grid text-center small text-muted mb-1" style="grid-template-columns:repeat(7,1fr);font-size:.7rem">
+                        <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                    </div>
+                    <div id="calGrid" class="d-grid gap-1 text-center" style="grid-template-columns:repeat(7,1fr)"></div>
+                    <div class="d-flex justify-content-between mt-2 pt-2 border-top" style="font-size:.7rem">
+                        <span class="text-muted"><span class="d-inline-block rounded-circle bg-danger me-1" style="width:7px;height:7px"></span>Selected</span>
+                        <span class="text-muted"><span class="d-inline-block rounded-circle bg-secondary opacity-50 me-1" style="width:7px;height:7px"></span>Booked / Unavailable</span>
+                    </div>
+                </div>
+
+                <!-- Booked Dates Indicator -->
+                <div id="bookedDatesBox" class="sn-soft-box p-2 px-3 small mb-3 d-none">
+                    <div class="fw-semibold mb-1"><i class="bi bi-calendar-x text-danger me-1"></i>Already Booked Dates:</div>
+                    <div id="bookedDatesList" class="text-muted"></div>
+                </div>
+
+                <form asp-controller="Booking" asp-action="Create" method="post" id="bookingForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="PropertyId" value="@p.Id" />
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold mb-1">Check-In</label>
+                            <input type="date" id="bkCheckIn" name="CheckInDate" value="@Model.BookingForm.CheckInDate.ToString("yyyy-MM-dd")" min="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control form-control-sm" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold mb-1">Check-Out</label>
+                            <input type="date" id="bkCheckOut" name="CheckOutDate" value="@Model.BookingForm.CheckOutDate.ToString("yyyy-MM-dd")" min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")" class="form-control form-control-sm" required />
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold mb-1">Guests (max @p.MaxGuests)</label>
+                        <input type="number" name="GuestCount" value="@Model.BookingForm.GuestCount" min="1" max="@p.MaxGuests" class="form-control form-control-sm" required />
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold mb-1">Promo Code (try <code>WELCOME10</code> or <code>STAY50</code>)</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" id="bkPromo" name="PromoCode" class="form-control text-uppercase" placeholder="Optional voucher" />
+                            <button type="button" id="applyPromoBtn" class="btn sn-btn-ghost">Apply</button>
+                        </div>
+                        <div id="promoFeedback" class="small mt-1"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold mb-1">Special Requests</label>
+                        <textarea name="SpecialRequests" rows="2" class="form-control form-control-sm" placeholder="Arrival time, extra pillows..."></textarea>
+                    </div>
+
+                    <!-- Live AJAX Price Breakdown -->
+                    <div id="priceError" class="alert sn-alert sn-alert-danger small py-2 d-none"></div>
+                    <div id="priceBreakdown" class="sn-soft-box p-3 small mb-3">
+                        <div class="d-flex justify-content-between mb-1"><span>Stay subtotal (<span id="pbNights">3</span> nights)</span><strong id="pbSub">RM 0.00</strong></div>
+                        <div class="d-flex justify-content-between mb-1"><span>Cleaning fee</span><span id="pbClean">RM 0.00</span></div>
+                        <div class="d-flex justify-content-between mb-1"><span>Service tax (10%)</span><span id="pbTax">RM 0.00</span></div>
+                        <div id="pbDiscRow" class="d-flex justify-content-between mb-1 text-success d-none"><span>Promo discount</span><span id="pbDisc">-RM 0.00</span></div>
+                        <hr class="my-2" />
+                        <div class="d-flex justify-content-between fs-6 fw-bold"><span>Total (MYR)</span><span id="pbTotal">RM 0.00</span></div>
+                    </div>
+
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <button type="submit" id="reserveBtn" class="btn sn-btn-primary w-100 py-2">Reserve &amp; Proceed to Payment</button>
+                    }
+                    else
+                    {
+                        <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="/Property/Details/@p.Id" class="btn sn-btn-primary w-100 py-2">Sign In to Reserve</a>
+                    }
+                </form>
+
+                <div class="text-center small text-muted mt-3">
+                    <i class="bi bi-lock-fill me-1 text-success"></i>Protected by concurrency locking (no double-booking)
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // 1. Property Location Leaflet Map
+        const detailMap = L.map('detailMap').setView([@p.Latitude, @p.Longitude], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(detailMap);
+        L.marker([@p.Latitude, @p.Longitude]).addTo(detailMap).bindPopup("<strong>@p.Title.Replace("\"", "")</strong><br/>@p.City").openPopup();
+
+        // 2. Load Booked Dates & Render Interactive Availability Calendar
+        let bookedRanges = [];
+        let calCursor = new Date();
+        calCursor.setDate(1);
+        let pickingCheckout = false;
+
+        function fmtYmd(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function isBookedDay(ymd) {
+            return bookedRanges.some(r => ymd >= r.start && ymd < r.end);
+        }
+
+        function renderAvailCalendar() {
+            const grid = document.getElementById('calGrid');
+            const label = document.getElementById('calMonthLabel');
+            if (!grid || !label) return;
+
+            const year = calCursor.getFullYear();
+            const month = calCursor.getMonth();
+            label.textContent = calCursor.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+            const firstDow = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const todayYmd = fmtYmd(new Date());
+            const ciYmd = document.getElementById('bkCheckIn').value;
+            const coYmd = document.getElementById('bkCheckOut').value;
+
+            let html = '';
+            for (let i = 0; i < firstDow; i++) html += '<span></span>';
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const ymd = fmtYmd(new Date(year, month, day));
+                const past = ymd < todayYmd;
+                const booked = isBookedDay(ymd);
+                const isEdge = ymd === ciYmd || ymd === coYmd;
+                const inRange = ciYmd && coYmd && ymd > ciYmd && ymd < coYmd;
+
+                let style = 'padding:4px 0;border-radius:7px;font-size:.76rem;border:none;';
+                if (past || booked) {
+                    style += 'background:transparent;color:var(--sn-muted);text-decoration:line-through;opacity:.45;cursor:not-allowed;';
+                } else if (isEdge) {
+                    style += 'background:var(--sn-accent);color:#fff;font-weight:700;cursor:pointer;';
+                } else if (inRange) {
+                    style += 'background:var(--sn-accent-soft);color:var(--sn-accent);font-weight:600;cursor:pointer;';
+                } else {
+                    style += 'background:var(--sn-surface);color:var(--sn-ink);cursor:pointer;';
+                }
+
+                html += `<button type="button" class="cal-day" data-ymd="${ymd}" ${(past || booked) ? 'disabled' : ''} style="${style}">${day}</button>`;
+            }
+            grid.innerHTML = html;
+        }
+
+        document.getElementById('calPrev')?.addEventListener('click', () => { calCursor.setMonth(calCursor.getMonth() - 1); renderAvailCalendar(); });
+        document.getElementById('calNext')?.addEventListener('click', () => { calCursor.setMonth(calCursor.getMonth() + 1); renderAvailCalendar(); });
+        document.getElementById('calGrid')?.addEventListener('click', e => {
+            const btn = e.target.closest('.cal-day');
+            if (!btn || btn.disabled) return;
+            const ymd = btn.dataset.ymd;
+            const ciEl = document.getElementById('bkCheckIn');
+            const coEl = document.getElementById('bkCheckOut');
+
+            if (!pickingCheckout || ymd <= ciEl.value) {
+                ciEl.value = ymd;
+                const nextDay = new Date(ymd + 'T00:00:00');
+                nextDay.setDate(nextDay.getDate() + 1);
+                coEl.value = fmtYmd(nextDay);
+                pickingCheckout = true;
+            } else {
+                coEl.value = ymd;
+                pickingCheckout = false;
+            }
+            renderAvailCalendar();
+            refreshPrice();
+        });
+
+        fetch('/Booking/GetBookedDates?propertyId=@p.Id')
+            .then(r => r.json())
+            .then(ranges => {
+                bookedRanges = ranges || [];
+                if (bookedRanges.length > 0) {
+                    document.getElementById('bookedDatesBox').classList.remove('d-none');
+                    document.getElementById('bookedDatesList').innerHTML = bookedRanges
+                        .map(r => `<span class="badge bg-danger-subtle text-danger me-1 mb-1">${r.start} → ${r.end}</span>`)
+                        .join('');
+                }
+                renderAvailCalendar();
+            });
+
+        // 3. Live AJAX Price Breakdown & Real-Time Conflict Checker
+        async function refreshPrice() {
+            const ci = document.getElementById('bkCheckIn').value;
+            const co = document.getElementById('bkCheckOut').value;
+            const promo = document.getElementById('bkPromo').value.trim();
+            if (!ci || !co) return;
+
+            const url = `/Booking/CalculatePrice?propertyId=@p.Id&checkIn=${ci}&checkOut=${co}&promoCode=${encodeURIComponent(promo)}`;
+            const res = await fetch(url);
+            const data = await res.json();
+
+            const errBox = document.getElementById('priceError');
+            const reserveBtn = document.getElementById('reserveBtn');
+            const promoFb = document.getElementById('promoFeedback');
+
+            if (!data.ok) {
+                errBox.textContent = data.error;
+                errBox.classList.remove('d-none');
+                if (reserveBtn) reserveBtn.disabled = true;
+                return;
+            }
+
+            if (data.promoInvalid) {
+                promoFb.innerHTML = `<span class="text-danger">${data.promoMessage}</span>`;
+                return;
+            }
+
+            errBox.classList.add('d-none');
+            if (reserveBtn) reserveBtn.disabled = false;
+
+            document.getElementById('pbNights').textContent = data.nights;
+            document.getElementById('pbSub').textContent = `RM ${data.subtotal.toFixed(2)}`;
+            document.getElementById('pbClean').textContent = `RM ${data.cleaningFee.toFixed(2)}`;
+            document.getElementById('pbTax').textContent = `RM ${data.serviceTax.toFixed(2)}`;
+            document.getElementById('pbTotal').textContent = `RM ${data.total.toFixed(2)}`;
+
+            const discRow = document.getElementById('pbDiscRow');
+            if (data.discount > 0) {
+                discRow.classList.remove('d-none');
+                document.getElementById('pbDisc').textContent = `-RM ${data.discount.toFixed(2)}`;
+            } else {
+                discRow.classList.add('d-none');
+            }
+
+            promoFb.innerHTML = data.promoMessage
+                ? `<span class="${data.discount > 0 ? 'text-success' : 'text-warning'}">${data.promoMessage}</span>`
+                : '';
+        }
+
+        document.getElementById('bkCheckIn')?.addEventListener('change', () => { renderAvailCalendar(); refreshPrice(); });
+        document.getElementById('bkCheckOut')?.addEventListener('change', () => { renderAvailCalendar(); refreshPrice(); });
+        document.getElementById('applyPromoBtn')?.addEventListener('click', refreshPrice);
+        refreshPrice();
+
+        // 4. AJAX Helpful Review Vote
+        document.querySelectorAll('.helpful-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const res = await fetch(`/Review/HelpfulVote?id=${btn.dataset.id}`, { method: 'POST' });
+                if (res.ok) {
+                    const data = await res.json();
+                    btn.querySelector('.vote-count').textContent = data.votes;
+                }
+            });
+        });
+    </script>
+}

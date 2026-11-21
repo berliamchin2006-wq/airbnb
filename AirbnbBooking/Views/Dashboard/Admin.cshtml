@@ -1,0 +1,158 @@
+@model AdminDashboardViewModel
+@inject Helper Helper
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Admin Platform Dashboard";
+}
+<div class="container-xl py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <span class="sn-eyebrow">Module 7 · Platform Intelligence</span>
+            <h2 class="fw-bold mt-1 mb-0">Admin Executive Dashboard</h2>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="ExportAdminReportCsv" class="btn sn-btn-dark btn-sm"><i class="bi bi-download me-1"></i>Export GMV CSV</a>
+            <a asp-controller="Security" asp-action="SystemHealth" class="btn sn-btn-ghost btn-sm"><i class="bi bi-cpu me-1"></i>System Health</a>
+        </div>
+    </div>
+
+    <!-- Platform KPIs -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="sn-kpi">
+                <div class="small text-muted">Platform GMV</div>
+                <div class="fs-3 fw-bold mt-1 text-success">@Helper.FormatMoney(Model.PlatformGmv)</div>
+                <div class="small text-muted">Refunds: @Helper.FormatMoney(Model.TotalRefundsProcessed)</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="sn-kpi">
+                <div class="small text-muted">Platform Revenue (Fees)</div>
+                <div class="fs-3 fw-bold mt-1">@Helper.FormatMoney(Model.PlatformCommissionRevenue)</div>
+                <div class="small text-muted">10% Guest Tax + 3% Host Fee</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="sn-kpi">
+                <div class="small text-muted">Total Users</div>
+                <div class="fs-3 fw-bold mt-1">@Model.TotalUsers</div>
+                <div class="small text-muted">@Model.TotalHosts Hosts · @Model.TotalGuests Guests · <a asp-controller="Security" asp-action="Users">@Model.PendingHostVerifications pending ID</a></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="sn-kpi">
+                <div class="small text-muted">Listings &amp; Disputes</div>
+                <div class="fs-3 fw-bold mt-1">@Model.ActiveProperties / @Model.TotalProperties</div>
+                <div class="small text-danger">@Model.OpenDisputesCount open requests · @Model.FlaggedReviewsCount flagged reviews</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="sn-card p-4 h-100">
+                <h5 class="fw-bold mb-3">Platform Transaction Volume (GMV) &amp; User Growth</h5>
+                <canvas id="adminGmvChart" height="115"></canvas>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="sn-card p-4 h-100">
+                <h5 class="fw-bold mb-3">Listings by Property Type</h5>
+                <canvas id="adminTypeChart" height="210"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="sn-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">Recent Security &amp; Financial Audit Events</h5>
+                    <a asp-controller="Security" asp-action="AuditLogs" class="small fw-semibold text-decoration-none" style="color:var(--sn-accent)">Explorer →</a>
+                </div>
+                @foreach (var ev in Model.RecentSecurityEvents)
+                {
+                    <div class="small border-bottom py-2 d-flex justify-content-between gap-2">
+                        <div>
+                            <span class="badge @(ev.Severity == "Critical" ? "bg-danger" : ev.Severity == "Warning" ? "bg-warning text-dark" : "bg-light text-dark border") me-1">@ev.Module</span>
+                            <strong>@ev.Action</strong> — @ev.Details
+                        </div>
+                        <span class="text-muted flex-shrink-0">@ev.Timestamp.ToString("dd MMM HH:mm")</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="sn-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">Open Disputes &amp; Service Tickets</h5>
+                    <a asp-controller="Security" asp-action="Disputes" class="small fw-semibold text-decoration-none" style="color:var(--sn-accent)">Moderate →</a>
+                </div>
+                @if (!Model.OpenDisputes.Any())
+                {
+                    <div class="small text-muted">No open disputes or unresolved tickets.</div>
+                }
+                @foreach (var d in Model.OpenDisputes)
+                {
+                    <div class="sn-soft-box p-2 px-3 small mb-2 d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>@d.IssueTitle</strong>
+                            <div class="text-muted">@d.Booking.Property.Title · @d.Guest.FullName (@d.Priority)</div>
+                        </div>
+                        <span class="sn-status sn-status-@d.Status">@d.Status</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        new Chart(document.getElementById('adminGmvChart'), {
+            type: 'line',
+            data: {
+                labels: @Html.Raw(JsonSerializer.Serialize(Model.MonthLabels)),
+                datasets: [
+                    {
+                        label: 'Platform GMV (MYR)',
+                        data: @Html.Raw(JsonSerializer.Serialize(Model.MonthlyGmv)),
+                        borderColor: '#ff385c',
+                        backgroundColor: 'rgba(255,56,92,0.12)',
+                        fill: true,
+                        tension: 0.35
+                    },
+                    {
+                        label: 'New Users',
+                        type: 'bar',
+                        yAxisID: 'y1',
+                        data: @Html.Raw(JsonSerializer.Serialize(Model.MonthlyNewUsers)),
+                        backgroundColor: 'rgba(17,24,39,0.75)',
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    y: { beginAtZero: true },
+                    y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { stepSize: 1 } }
+                }
+            }
+        });
+
+        const typeMap = @Html.Raw(JsonSerializer.Serialize(Model.PropertyTypeCounts));
+        new Chart(document.getElementById('adminTypeChart'), {
+            type: 'pie',
+            data: {
+                labels: Object.keys(typeMap),
+                datasets: [{
+                    data: Object.values(typeMap),
+                    backgroundColor: ['#ff385c', '#111827', '#059669', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899']
+                }]
+            },
+            options: { plugins: { legend: { position: 'bottom' } } }
+        });
+    </script>
+}

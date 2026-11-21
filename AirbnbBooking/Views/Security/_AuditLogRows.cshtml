@@ -1,0 +1,17 @@
+@model List<AuditLog>
+@foreach (var a in Model)
+{
+    <tr>
+        <td class="small text-nowrap">@a.Timestamp.ToString("dd MMM yyyy HH:mm:ss")</td>
+        <td>
+            <span class="badge @(a.Severity == "Critical" ? "bg-danger" : a.Severity == "Warning" ? "bg-warning text-dark" : "bg-secondary-subtle text-secondary-emphasis")">
+                @a.Severity
+            </span>
+        </td>
+        <td class="small fw-semibold">@a.Module</td>
+        <td class="small">@a.UserEmail</td>
+        <td class="small font-monospace">@a.Action</td>
+        <td class="small text-muted">@a.IpAddress</td>
+        <td class="small">@a.Details</td>
+    </tr>
+}

@@ -1,0 +1,64 @@
+@model List<ServiceRequest>
+@{
+    ViewData["Title"] = "Disputes & Review Moderation";
+    var flagged = ViewBag.FlaggedReviews as List<Review> ?? [];
+}
+<div class="container-xl py-4">
+    <span class="sn-eyebrow">Module 8 · Trust &amp; Moderation</span>
+    <h2 class="fw-bold mt-1 mb-4">Dispute Resolution &amp; Flagged Reviews</h2>
+
+    <div class="sn-card p-4 mb-4">
+        <h5 class="fw-bold mb-3">Flagged Reviews (@flagged.Count)</h5>
+        @if (!flagged.Any())
+        {
+            <div class="small text-muted">No flagged reviews in queue.</div>
+        }
+        @foreach (var r in flagged)
+        {
+            <div class="sn-soft-box p-3 mb-2 d-flex flex-wrap justify-content-between align-items-center gap-2 small">
+                <div>
+                    <strong>@r.Property.Title</strong> · by @r.Guest.FullName (★ @r.OverallRating)
+                    <div>"@r.Comment"</div>
+                    <div class="text-danger">Flag Reason: @r.FlagReason</div>
+                </div>
+                <div class="d-flex gap-2">
+                    <form asp-action="ClearFlaggedReview" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@r.Id" />
+                        <button type="submit" class="btn btn-sm sn-btn-ghost">Dismiss Flag</button>
+                    </form>
+                    <form asp-action="RemoveFlaggedReview" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@r.Id" />
+                        <button type="submit" class="btn btn-sm btn-danger">Remove Review</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="sn-card p-4">
+        <h5 class="fw-bold mb-3">All Platform Service Requests &amp; Escalated Disputes (@Model.Count)</h5>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="small text-muted">
+                    <tr><th>ID</th><th>Booking &amp; Property</th><th>Guest</th><th>Issue</th><th>Priority</th><th>Status</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var sr in Model)
+                    {
+                        <tr>
+                            <td class="small">#@sr.Id</td>
+                            <td class="small"><strong>@sr.Booking.Property.Title</strong><div class="text-muted">@sr.Booking.BookingReference</div></td>
+                            <td class="small">@sr.Guest.FullName</td>
+                            <td class="small"><strong>@sr.IssueTitle</strong><div class="text-muted">@sr.Category</div></td>
+                            <td><span class="badge @(sr.Priority is "Urgent" or "High" ? "bg-danger" : "bg-secondary")">@sr.Priority</span></td>
+                            <td><span class="sn-status sn-status-@sr.Status">@sr.Status</span></td>
+                            <td><a asp-controller="Stay" asp-action="ServiceRequests" asp-route-bookingId="@sr.BookingId" class="btn btn-sm sn-btn-ghost">Manage</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

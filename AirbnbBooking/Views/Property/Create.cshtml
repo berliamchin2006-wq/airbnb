@@ -1,0 +1,208 @@
+@model PropertyFormViewModel
+@{
+    ViewData["Title"] = "Add New Listing";
+}
+<div class="container-xl py-4" style="max-width:960px">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <span class="sn-eyebrow">Module 2 · Host Listing Studio</span>
+            <h2 class="fw-bold mt-1 mb-0">Publish a New Property</h2>
+        </div>
+        <a asp-action="MyProperties" class="btn sn-btn-ghost btn-sm">Back to My Listings</a>
+    </div>
+
+    <form asp-action="Create" method="post" enctype="multipart/form-data" class="sn-card p-4 p-md-5">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+        <h5 class="fw-bold mb-3">1. Basic Information</h5>
+        <div class="row g-3 mb-4">
+            <div class="col-md-8">
+                <label asp-for="Title" class="form-label small fw-semibold"></label>
+                <input asp-for="Title" class="form-control" placeholder="e.g. Bukit Bintang Panoramic Loft Suite" />
+                <span asp-validation-for="Title" class="text-danger small"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="PropertyType" class="form-label small fw-semibold"></label>
+                <select asp-for="PropertyType" class="form-select">
+                    @foreach (var t in new[] { "Condominium", "Villa", "Townhouse", "Chalet", "Studio", "Apartment", "Bungalow" })
+                    {
+                        <option value="@t">@t</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12">
+                <label asp-for="Description" class="form-label small fw-semibold"></label>
+                <textarea asp-for="Description" rows="4" class="form-control" placeholder="Describe the space, natural light, neighborhood, and highlights..."></textarea>
+                <span asp-validation-for="Description" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <h5 class="fw-bold mb-3">2. Location &amp; Map Coordinates</h5>
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label asp-for="Address" class="form-label small fw-semibold"></label>
+                <input asp-for="Address" class="form-control" />
+                <span asp-validation-for="Address" class="text-danger small"></span>
+            </div>
+            <div class="col-md-2">
+                <label asp-for="City" class="form-label small fw-semibold"></label>
+                <input asp-for="City" class="form-control" />
+                <span asp-validation-for="City" class="text-danger small"></span>
+            </div>
+            <div class="col-md-2">
+                <label asp-for="State" class="form-label small fw-semibold"></label>
+                <input asp-for="State" class="form-control" />
+                <span asp-validation-for="State" class="text-danger small"></span>
+            </div>
+            <div class="col-md-2">
+                <label asp-for="Postcode" class="form-label small fw-semibold"></label>
+                <input asp-for="Postcode" class="form-control" />
+                <span asp-validation-for="Postcode" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Latitude" class="form-label small fw-semibold"></label>
+                <input asp-for="Latitude" id="latInput" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Longitude" class="form-label small fw-semibold"></label>
+                <input asp-for="Longitude" id="lngInput" class="form-control form-control-sm" />
+            </div>
+        </div>
+        <div id="pickerMap" class="mb-4" style="height:260px;border-radius:12px;"></div>
+
+        <h5 class="fw-bold mb-3">3. Capacity, Pricing &amp; Policy</h5>
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <label asp-for="MaxGuests" class="form-label small fw-semibold"></label>
+                <input asp-for="MaxGuests" class="form-control" />
+            </div>
+            <div class="col-6 col-md-3">
+                <label asp-for="Bedrooms" class="form-label small fw-semibold"></label>
+                <input asp-for="Bedrooms" class="form-control" />
+            </div>
+            <div class="col-6 col-md-3">
+                <label asp-for="Beds" class="form-label small fw-semibold"></label>
+                <input asp-for="Beds" class="form-control" />
+            </div>
+            <div class="col-6 col-md-3">
+                <label asp-for="Bathrooms" class="form-label small fw-semibold"></label>
+                <input asp-for="Bathrooms" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label asp-for="BaseNightlyRate" class="form-label small fw-semibold"></label>
+                <input asp-for="BaseNightlyRate" class="form-control" />
+                <span asp-validation-for="BaseNightlyRate" class="text-danger small"></span>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="CustomWeekendRate" class="form-label small fw-semibold"></label>
+                <input asp-for="CustomWeekendRate" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label asp-for="CleaningFee" class="form-label small fw-semibold"></label>
+                <input asp-for="CleaningFee" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label asp-for="CancellationPolicy" class="form-label small fw-semibold"></label>
+                <select asp-for="CancellationPolicy" class="form-select">
+                    <option value="Flexible">Flexible (100% ≥24h)</option>
+                    <option value="Moderate">Moderate (100% ≥5d)</option>
+                    <option value="Strict">Strict (50% ≥7d)</option>
+                </select>
+            </div>
+            <div class="col-12">
+                <label asp-for="HouseRules" class="form-label small fw-semibold"></label>
+                <textarea asp-for="HouseRules" rows="2" class="form-control"></textarea>
+            </div>
+        </div>
+
+        <h5 class="fw-bold mb-3">4. Amenities</h5>
+        <div class="row g-2 mb-4">
+            @foreach (var am in Model.AllAmenities)
+            {
+                <div class="col-6 col-md-4 col-lg-3">
+                    <label class="sn-soft-box p-2 px-3 d-flex align-items-center gap-2 small mb-0" style="cursor:pointer">
+                        <input type="checkbox" class="form-check-input mt-0" name="SelectedAmenityIds" value="@am.Id" />
+                        <i class="bi @am.IconClass text-danger"></i>
+                        <span>@am.Name</span>
+                    </label>
+                </div>
+            }
+        </div>
+
+        <h5 class="fw-bold mb-3">5. Multi-Photo Gallery (Drag &amp; Drop + Primary Selection)</h5>
+        <input type="hidden" asp-for="PrimaryPhotoIndex" id="primaryIdxInput" value="0" />
+        <div id="dropZone" class="sn-dropzone mb-3">
+            <i class="bi bi-cloud-arrow-up display-6 text-danger"></i>
+            <div class="fw-semibold mt-1">Drag &amp; drop multiple property photos here or click to browse</div>
+            <div class="small text-muted">JPG, PNG, WEBP up to 8 MB each. Click any preview below to mark it as Primary Cover.</div>
+            <input asp-for="Photos" id="photoInput" type="file" multiple accept="image/*" class="d-none" />
+        </div>
+        <div id="photoPreviewGrid" class="row g-2 mb-4"></div>
+
+        <div class="form-check mb-4">
+            <input asp-for="IsActive" class="form-check-input" />
+            <label asp-for="IsActive" class="form-check-label small fw-semibold">Publish listing immediately</label>
+        </div>
+
+        <button type="submit" class="btn sn-btn-primary px-4 py-2">Create Listing &amp; Configure Seasonal Rates →</button>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        const pMap = L.map('pickerMap').setView([@Model.Latitude, @Model.Longitude], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OSM' }).addTo(pMap);
+        const pin = L.marker([@Model.Latitude, @Model.Longitude], { draggable: true }).addTo(pMap);
+        function syncPin(latlng) {
+            document.getElementById('latInput').value = latlng.lat.toFixed(6);
+            document.getElementById('lngInput').value = latlng.lng.toFixed(6);
+        }
+        pin.on('dragend', e => syncPin(e.target.getLatLng()));
+        pMap.on('click', e => { pin.setLatLng(e.latlng); syncPin(e.latlng); });
+
+        // Drag & Drop Multi-Photo Preview
+        const dz = document.getElementById('dropZone');
+        const input = document.getElementById('photoInput');
+        const grid = document.getElementById('photoPreviewGrid');
+
+        dz.addEventListener('click', () => input.click());
+        dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+        dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+        dz.addEventListener('drop', e => {
+            e.preventDefault(); dz.classList.remove('dragover');
+            input.files = e.dataTransfer.files;
+            renderPreviews();
+        });
+        input.addEventListener('change', renderPreviews);
+
+        function renderPreviews() {
+            grid.innerHTML = '';
+            Array.from(input.files).forEach((file, idx) => {
+                const col = document.createElement('div');
+                col.className = 'col-4 col-md-3';
+                col.innerHTML = `
+                    <div class="sn-card p-1 position-relative preview-tile" data-idx="${idx}" style="cursor:pointer;${idx === 0 ? 'border:2px solid #ff385c' : ''}">
+                        <img src="${URL.createObjectURL(file)}" class="w-100 rounded" style="height:100px;object-fit:cover"/>
+                        <span class="badge ${idx === 0 ? 'bg-danger' : 'bg-dark'} position-absolute top-0 start-0 m-2 small primary-badge">${idx === 0 ? 'Primary' : 'Photo ' + (idx + 1)}</span>
+                    </div>`;
+                grid.appendChild(col);
+            });
+        }
+
+        grid.addEventListener('click', e => {
+            const tile = e.target.closest('.preview-tile');
+            if (!tile) return;
+            const chosen = tile.dataset.idx;
+            document.getElementById('primaryIdxInput').value = chosen;
+            grid.querySelectorAll('.preview-tile').forEach(t => {
+                const isSel = t.dataset.idx === chosen;
+                t.style.border = isSel ? '2px solid #ff385c' : '';
+                const b = t.querySelector('.primary-badge');
+                b.className = `badge ${isSel ? 'bg-danger' : 'bg-dark'} position-absolute top-0 start-0 m-2 small primary-badge`;
+                b.textContent = isSel ? 'Primary' : 'Photo ' + (parseInt(t.dataset.idx) + 1);
+            });
+        });
+    </script>
+}

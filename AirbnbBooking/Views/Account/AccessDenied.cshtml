@@ -1,0 +1,11 @@
+@{
+    ViewData["Title"] = "Access Denied";
+}
+<div class="container-xl py-5">
+    <div class="sn-card p-5 text-center mx-auto" style="max-width:520px">
+        <div class="display-4 text-danger mb-3"><i class="bi bi-shield-x"></i></div>
+        <h2 class="fw-bold mb-2">Access Restricted (403)</h2>
+        <p class="text-muted">You do not have the required role or resource ownership permission to view or modify this page.</p>
+        <a asp-controller="Property" asp-action="Catalog" class="btn sn-btn-primary mt-2">Return to Explore</a>
+    </div>
+</div>

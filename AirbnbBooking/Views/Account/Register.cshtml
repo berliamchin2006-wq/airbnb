@@ -1,0 +1,95 @@
+@model RegisterViewModel
+@{
+    ViewData["Title"] = "Create Account";
+}
+<div class="container-xl py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-6">
+            <div class="sn-card p-4 p-md-5">
+                <span class="sn-eyebrow">Module 1 · Registration</span>
+                <h2 class="fw-bold mt-2 mb-1">Join StayNest</h2>
+                <p class="text-muted small mb-4">Book curated Malaysian stays as a Guest or list properties as a Host.</p>
+
+                <form asp-action="Register" method="post" novalidate>
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="FullName" class="form-label small fw-semibold"></label>
+                            <input asp-for="FullName" class="form-control" placeholder="e.g. Aiman Hakim" />
+                            <span asp-validation-for="FullName" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="PhoneNumber" class="form-label small fw-semibold"></label>
+                            <input asp-for="PhoneNumber" class="form-control" placeholder="012-3456789" />
+                            <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-8">
+                            <label asp-for="Email" class="form-label small fw-semibold"></label>
+                            <input asp-for="Email" class="form-control" placeholder="you@example.com" />
+                            <span asp-validation-for="Email" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Role" class="form-label small fw-semibold">Account Role</label>
+                            <select asp-for="Role" class="form-select">
+                                <option value="Guest">Guest (Book)</option>
+                                <option value="Host">Host (List)</option>
+                            </select>
+                            <span asp-validation-for="Role" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Password" class="form-label small fw-semibold"></label>
+                            <input asp-for="Password" class="form-control" placeholder="Min 8 chars, A-z, 0-9, !@("@")" />
+                            <div class="progress mt-2" style="height:5px"><div id="pwBar" class="progress-bar" style="width:0%"></div></div>
+                            <span asp-validation-for="Password" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="ConfirmPassword" class="form-label small fw-semibold"></label>
+                            <input asp-for="ConfirmPassword" class="form-control" placeholder="Repeat password" />
+                            <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="CaptchaAnswer" class="form-label small fw-semibold">Anti-Bot Verification</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="sn-soft-box px-3 py-2 fw-bold font-monospace flex-shrink-0" id="regCaptchaText">@ViewBag.CaptchaQuestion</div>
+                                <button type="button" id="regRefreshCaptcha" class="btn btn-sm sn-btn-ghost"><i class="bi bi-arrow-clockwise"></i></button>
+                                <input asp-for="CaptchaAnswer" class="form-control" placeholder="Solve challenge" autocomplete="off" />
+                            </div>
+                            <span asp-validation-for="CaptchaAnswer" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn sn-btn-primary w-100 py-2 mt-4">Create Account &amp; Send Verification Code</button>
+                </form>
+
+                <p class="text-center small text-muted mt-4 mb-0">
+                    Already registered? <a asp-action="Login" class="fw-semibold text-decoration-none" style="color:var(--sn-accent)">Sign In</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById('regRefreshCaptcha')?.addEventListener('click', async () => {
+            const r = await fetch('/Account/RefreshCaptcha');
+            const d = await r.json();
+            document.getElementById('regCaptchaText').textContent = d.question;
+        });
+
+        document.getElementById('Password')?.addEventListener('input', e => {
+            const v = e.target.value;
+            let score = 0;
+            if (v.length >= 8) score += 25;
+            if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score += 25;
+            if (/\d/.test(v)) score += 25;
+            if (/[^a-zA-Z0-9]/.test(v)) score += 25;
+            const bar = document.getElementById('pwBar');
+            bar.style.width = score + '%';
+            bar.className = 'progress-bar ' + (score >= 100 ? 'bg-success' : score >= 50 ? 'bg-warning' : 'bg-danger');
+        });
+    </script>
+}

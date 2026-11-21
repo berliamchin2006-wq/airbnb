@@ -1,0 +1,27 @@
+@{
+    ViewData["Title"] = "CSV Batch Import";
+}
+<div class="container-xl py-4" style="max-width:740px">
+    <div class="sn-card p-4 p-md-5">
+        <span class="sn-eyebrow">Module 2 · Batch Insert</span>
+        <h2 class="fw-bold mt-2 mb-2">Batch Import Listings via CSV</h2>
+        <p class="small text-muted mb-3">Upload a comma-separated CSV file to publish multiple property listings at once.</p>
+
+        <div class="sn-soft-box p-3 small font-monospace mb-4">
+            Title,PropertyType,Address,City,State,Postcode,BaseNightlyRate,MaxGuests,Description<br />
+            Bangsar South Cozy Studio,Studio,8 Jalan Kerinchi,Kuala Lumpur,Kuala Lumpur,59200,190,2,Modern urban studio near LRT.
+        </div>
+
+        <form asp-action="BatchImport" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <div class="mb-3">
+                <label class="form-label small fw-semibold">Choose CSV File (.csv)</label>
+                <input type="file" name="csvFile" accept=".csv" class="form-control" required />
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn sn-btn-primary">Upload &amp; Import Listings</button>
+                <a asp-action="MyProperties" class="btn sn-btn-ghost">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>

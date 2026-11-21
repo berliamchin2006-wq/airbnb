@@ -1,0 +1,22 @@
+# Build outputs
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio / IDE
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Local SQL Server Express runtime database files (recreated automatically by EF Core Migrations)
+*.mdf
+*.ldf
+
+# Temporary test & browser inspection files
+.playwright-mcp/
+*.log
+node_modules/

@@ -1,0 +1,233 @@
+@model ProfileViewModel
+@{
+    ViewData["Title"] = "Profile & Verification";
+    string photoSrc = Helper.ResolvePhotoUrl(Model.CurrentProfilePhoto, "profiles");
+}
+<div class="container-xl py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <span class="sn-eyebrow">Module 1 · Account &amp; Verification</span>
+            <h2 class="fw-bold mt-1 mb-0">Profile &amp; Payout Security</h2>
+        </div>
+        <a asp-action="Sessions" class="btn sn-btn-ghost btn-sm"><i class="bi bi-laptop me-1"></i>Manage Rotating Sessions</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <form asp-action="Profile" method="post" enctype="multipart/form-data" class="sn-card p-4">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="WebcamPhotoBase64" id="webcamBase64Input" />
+                <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+                <!-- Avatar + Webcam / Crop Photo Studio -->
+                <div class="d-flex flex-wrap align-items-center gap-4 pb-4 mb-4 border-bottom">
+                    <img id="avatarPreview" src="@photoSrc" alt="Profile Photo" class="rounded-circle border object-fit-cover" style="width:92px;height:92px" />
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <h5 class="fw-bold mb-0">@Model.FullName</h5>
+                            <span class="sn-role-badge">@Model.Role</span>
+                            <span class="sn-status sn-status-@Model.IdentityStatus">@Model.IdentityStatus</span>
+                        </div>
+                        <div class="small text-muted mb-2">@Model.Email · @(Model.IsEmailVerified ? "Email Verified ✓" : "Unverified")</div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <label class="btn btn-sm sn-btn-ghost mb-0">
+                                <i class="bi bi-upload me-1"></i>Upload Photo
+                                <input asp-for="ProfilePhotoFile" type="file" accept="image/*" class="d-none" id="filePhotoInput" />
+                            </label>
+                            <button type="button" class="btn btn-sm sn-btn-ghost" data-bs-toggle="modal" data-bs-target="#webcamModal">
+                                <i class="bi bi-camera-video me-1"></i>Webcam Capture &amp; Crop
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="FullName" class="form-label small fw-semibold"></label>
+                        <input asp-for="FullName" class="form-control" />
+                        <span asp-validation-for="FullName" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="PhoneNumber" class="form-label small fw-semibold"></label>
+                        <input asp-for="PhoneNumber" class="form-control" />
+                        <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Bio" class="form-label small fw-semibold"></label>
+                        <textarea asp-for="Bio" class="form-control" rows="3" placeholder="Tell hosts or guests a little about yourself..."></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="ThemePreference" class="form-label small fw-semibold"></label>
+                        <select asp-for="ThemePreference" class="form-select">
+                            <option value="light">Light Editorial Theme</option>
+                            <option value="dark">Dark Slate Theme</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="PreferredCurrency" class="form-label small fw-semibold"></label>
+                        <select asp-for="PreferredCurrency" class="form-select">
+                            <option value="MYR">MYR (RM)</option>
+                            <option value="USD">USD ($)</option>
+                            <option value="SGD">SGD (S$)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Identity Document Verification -->
+                <div class="sn-soft-box p-3 mt-4">
+                    <h6 class="fw-bold mb-1"><i class="bi bi-person-badge text-danger me-2"></i>Identity Verification (MyKad / Passport)</h6>
+                    <p class="small text-muted mb-2">Verified profiles unlock instant booking trust and Superhost eligibility. Status: <strong>@Model.IdentityStatus</strong></p>
+                    @if (!string.IsNullOrEmpty(Model.IdentityNotes))
+                    {
+                        <div class="small text-muted mb-2"><em>Admin note: @Model.IdentityNotes</em></div>
+                    }
+                    <input asp-for="IdDocumentFile" type="file" accept="image/*" class="form-control form-control-sm" />
+                </div>
+
+                <!-- AES-256 Encrypted Banking Details -->
+                @if (Model.Role is "Host" or "Admin")
+                {
+                    <div class="sn-soft-box p-3 mt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="fw-bold mb-0"><i class="bi bi-shield-lock-fill text-success me-2"></i>Host Payout Bank Account (AES-256 Encrypted)</h6>
+                            <span class="badge bg-success-subtle text-success">Current: @Model.MaskedBankAccount</span>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label asp-for="BankName" class="form-label small"></label>
+                                <input asp-for="BankName" class="form-control form-control-sm" placeholder="Maybank / CIMB" />
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="BankHolderName" class="form-label small"></label>
+                                <input asp-for="BankHolderName" class="form-control form-control-sm" />
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="BankAccountNumber" class="form-label small"></label>
+                                <input asp-for="BankAccountNumber" class="form-control form-control-sm" placeholder="Leave blank to keep existing" />
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <button type="submit" class="btn sn-btn-primary mt-4 px-4">Save Profile Changes</button>
+            </form>
+        </div>
+
+        <!-- Change Password Card -->
+        <div class="col-lg-4">
+            <div class="sn-card p-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-key me-2 text-danger"></i>Change Password</h5>
+                <form asp-action="ChangePassword" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Current Password</label>
+                        <input name="CurrentPassword" type="password" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">New Password</label>
+                        <input name="NewPassword" type="password" class="form-control" required minlength="8" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Confirm New Password</label>
+                        <input name="ConfirmNewPassword" type="password" class="form-control" required minlength="8" />
+                    </div>
+                    <button type="submit" class="btn sn-btn-dark w-100">Update Password</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Webcam Capture + Square Crop/Rotate Modal -->
+<div class="modal fade" id="webcamModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content p-3">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">Webcam Photo Studio (Crop &amp; Rotate)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <video id="camVideo" autoplay playsinline class="w-100 rounded mb-2 bg-dark" style="max-height:260px"></video>
+                <canvas id="camCanvas" width="320" height="320" class="d-none rounded-circle border mx-auto mb-2"></canvas>
+                <div class="d-flex justify-content-center gap-2 mt-2">
+                    <button type="button" id="btnStartCam" class="btn btn-sm sn-btn-ghost"><i class="bi bi-camera-video me-1"></i>Start Camera</button>
+                    <button type="button" id="btnSnap" class="btn btn-sm sn-btn-primary"><i class="bi bi-camera me-1"></i>Capture Square</button>
+                    <button type="button" id="btnRotate" class="btn btn-sm sn-btn-ghost"><i class="bi bi-arrow-clockwise me-1"></i>Rotate 90°</button>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" id="btnUseSnap" class="btn sn-btn-primary" data-bs-dismiss="modal">Apply Photo</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        let camStream = null;
+        let rotation = 0;
+        let lastSnapshot = null;
+
+        document.getElementById('filePhotoInput')?.addEventListener('change', e => {
+            const f = e.target.files[0];
+            if (f) {
+                document.getElementById('avatarPreview').src = URL.createObjectURL(f);
+                document.getElementById('webcamBase64Input').value = '';
+            }
+        });
+
+        document.getElementById('btnStartCam')?.addEventListener('click', async () => {
+            try {
+                camStream = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 480 } });
+                document.getElementById('camVideo').srcObject = camStream;
+                document.getElementById('camVideo').classList.remove('d-none');
+                document.getElementById('camCanvas').classList.add('d-none');
+            } catch {
+                alert('Webcam access denied or unavailable on this device.');
+            }
+        });
+
+        function renderCropped(imgSource, angle) {
+            const canvas = document.getElementById('camCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.save();
+            ctx.clearRect(0, 0, 320, 320);
+            ctx.translate(160, 160);
+            ctx.rotate((angle * Math.PI) / 180);
+            const sw = imgSource.videoWidth || imgSource.width;
+            const sh = imgSource.videoHeight || imgSource.height;
+            const side = Math.min(sw, sh);
+            ctx.drawImage(imgSource, (sw - side) / 2, (sh - side) / 2, side, side, -160, -160, 320, 320);
+            ctx.restore();
+            canvas.classList.remove('d-none');
+            document.getElementById('camVideo').classList.add('d-none');
+            lastSnapshot = canvas.toDataURL('image/png');
+        }
+
+        document.getElementById('btnSnap')?.addEventListener('click', () => {
+            const video = document.getElementById('camVideo');
+            if (!video.srcObject) return;
+            rotation = 0;
+            renderCropped(video, 0);
+        });
+
+        document.getElementById('btnRotate')?.addEventListener('click', () => {
+            if (!lastSnapshot) return;
+            const img = new Image();
+            img.onload = () => {
+                rotation = (rotation + 90) % 360;
+                renderCropped(img, 90);
+            };
+            img.src = lastSnapshot;
+        });
+
+        document.getElementById('btnUseSnap')?.addEventListener('click', () => {
+            if (lastSnapshot) {
+                document.getElementById('avatarPreview').src = lastSnapshot;
+                document.getElementById('webcamBase64Input').value = lastSnapshot;
+            }
+            if (camStream) camStream.getTracks().forEach(t => t.stop());
+        });
+    </script>
+}

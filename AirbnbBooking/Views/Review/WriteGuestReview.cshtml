@@ -1,0 +1,54 @@
+@model GuestReviewViewModel
+@{
+    ViewData["Title"] = "Write Stay Review";
+}
+<div class="container-xl py-4" style="max-width:680px">
+    <div class="sn-card p-4 p-md-5">
+        <span class="sn-eyebrow">Module 6 · Guest Review</span>
+        <h2 class="fw-bold mt-2 mb-1">Rate Your Stay</h2>
+        <p class="small text-muted mb-4">@Model.PropertyTitle — Score all 4 criteria. Reviews follow the 14-day double-blind publishing policy.</p>
+
+        <form asp-action="WriteGuestReview" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="BookingId" />
+            <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+            @foreach (var dim in new[] {
+                ("CleanlinessRating", "Cleanliness", Model.CleanlinessRating),
+                ("AccuracyRating", "Listing Accuracy", Model.AccuracyRating),
+                ("CommunicationRating", "Host Communication", Model.CommunicationRating),
+                ("LocationRating", "Location & Convenience", Model.LocationRating)
+            })
+            {
+                <div class="d-flex justify-content-between align-items-center sn-soft-box px-3 py-2 mb-2">
+                    <span class="fw-semibold small">@dim.Item2</span>
+                    <div class="sn-star-input">
+                        @for (int s = 5; s >= 1; s--)
+                        {
+                            string id = $"{dim.Item1}_{s}";
+                            <input type="radio" id="@id" name="@dim.Item1" value="@s" checked="@(dim.Item3 == s)" />
+                            <label for="@id">★</label>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div class="mt-3 mb-3">
+                <label asp-for="Comment" class="form-label small fw-semibold"></label>
+                <textarea asp-for="Comment" rows="4" class="form-control" placeholder="Share what you loved about the home, neighborhood, and hosting..."></textarea>
+                <span asp-validation-for="Comment" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="ReviewPhoto" class="form-label small fw-semibold"></label>
+                <input asp-for="ReviewPhoto" type="file" accept="image/*" class="form-control form-control-sm" />
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn sn-btn-primary px-4">Submit Review</button>
+                <a asp-action="Pending" class="btn sn-btn-ghost">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

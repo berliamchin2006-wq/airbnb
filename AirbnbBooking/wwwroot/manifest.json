@@ -1,0 +1,16 @@
+{
+  "name": "StayNest — Airbnb Booking System",
+  "short_name": "StayNest",
+  "description": "Short-stay accommodation booking, hosting, payments, and operations platform.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ff385c",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

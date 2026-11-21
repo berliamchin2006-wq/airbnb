@@ -1,0 +1,65 @@
+@{
+    ViewData["Title"] = "QR Check-In Scanner";
+}
+<div class="container-xl py-4" style="max-width:680px">
+    <div class="sn-card p-4 p-md-5">
+        <span class="sn-eyebrow">Module 5 · Contactless Check-In</span>
+        <h2 class="fw-bold mt-2 mb-1">Host QR Check-In Scanner</h2>
+        <p class="small text-muted mb-4">Scan the guest's digital QR Check-In Pass via webcam or enter the pass token below to verify and check in instantly.</p>
+
+        <div id="qrReader" class="mb-3 rounded overflow-hidden"></div>
+        <div class="text-center mb-4">
+            <button type="button" id="startScanBtn" class="btn sn-btn-dark btn-sm"><i class="bi bi-camera-video me-1"></i>Start Webcam QR Scanner</button>
+        </div>
+
+        <form id="verifyQrForm" class="mb-3">
+            @Html.AntiForgeryToken()
+            <label class="form-label small fw-semibold">Manual QR Token or Booking Reference</label>
+            <div class="input-group">
+                <input type="text" id="qrTokenInput" name="qrToken" class="form-control font-monospace" placeholder="e.g. QR-SN-LGK-1005 or SN-2026-1005" required />
+                <button type="submit" class="btn sn-btn-primary">Verify &amp; Check In</button>
+            </div>
+        </form>
+
+        <div id="qrResult" class="d-none alert sn-alert mt-3"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script>
+        async function verifyToken(token) {
+            const anti = document.querySelector('#verifyQrForm input[name="__RequestVerificationToken"]').value;
+            const formData = new FormData();
+            formData.append('qrToken', token);
+            formData.append('__RequestVerificationToken', anti);
+
+            const res = await fetch('/Stay/VerifyQr', { method: 'POST', body: formData });
+            const data = await res.json();
+            const box = document.getElementById('qrResult');
+            box.classList.remove('d-none', 'sn-alert-success', 'sn-alert-danger');
+            box.classList.add(data.ok ? 'sn-alert-success' : 'sn-alert-danger');
+            box.innerHTML = data.ok
+                ? `<strong>${data.message}</strong><div class="small mt-1">${data.property} · ${data.reference} · <a href="/Booking/Details/${data.bookingId}" class="fw-bold">Open Booking →</a></div>`
+                : `<strong>Verification Failed:</strong> ${data.message}`;
+        }
+
+        document.getElementById('verifyQrForm')?.addEventListener('submit', e => {
+            e.preventDefault();
+            verifyToken(document.getElementById('qrTokenInput').value);
+        });
+
+        document.getElementById('startScanBtn')?.addEventListener('click', () => {
+            const scanner = new Html5Qrcode("qrReader");
+            scanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 220, height: 220 } },
+                decodedText => {
+                    document.getElementById('qrTokenInput').value = decodedText;
+                    scanner.stop().catch(() => {});
+                    verifyToken(decodedText);
+                }
+            ).catch(() => alert('Camera access denied or no webcam detected. Use manual token entry below.'));
+        });
+    </script>
+}

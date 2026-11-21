@@ -1,0 +1,74 @@
+@model List<UserSessionToken>
+@using AirbnbBooking.Middleware
+@{
+    ViewData["Title"] = "Security & Database Infrastructure Health";
+    var tel = ViewBag.Telemetry as RateLimitTelemetry ?? new RateLimitTelemetry();
+}
+<div class="container-xl py-4">
+    <span class="sn-eyebrow">Module 8 · Infrastructure Telemetry</span>
+    <h2 class="fw-bold mt-1 mb-4">Security, Encryption, Rate Limiter &amp; EF Core Pool</h2>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="sn-kpi">
+                <div class="small text-muted">EF Core DbContext Pool</div>
+                <div class="fs-4 fw-bold mt-1 @((bool)ViewBag.DbCanConnect ? "text-success" : "text-danger")">
+                    @((bool)ViewBag.DbCanConnect ? "Healthy ✓" : "Offline")
+                </div>
+                <div class="small text-muted">SQL Server Express (.mdf)</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="sn-kpi">
+                <div class="small text-muted">Rate Limiter Middleware</div>
+                <div class="fs-4 fw-bold mt-1">@tel.TotalRequestsChecked checked</div>
+                <div class="small text-danger">@tel.TotalRequestsBlocked brute-force blocked</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="sn-kpi">
+                <div class="small text-muted">AES-256 Data at Rest</div>
+                <div class="fs-4 fw-bold mt-1 text-success">@ViewBag.EncryptedBankCount encrypted</div>
+                <div class="small text-muted">Host banking records secured</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="sn-kpi">
+                <div class="small text-muted">Audit Trail &amp; Lockouts</div>
+                <div class="fs-4 fw-bold mt-1">@ViewBag.TotalAuditEntries logs</div>
+                <div class="small text-muted">@ViewBag.LockedOutAccounts account(s) locked out</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sn-card p-4">
+        <h5 class="fw-bold mb-3">Active Rotating User Sessions (@Model.Count)</h5>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="small text-muted">
+                    <tr><th>User</th><th>Role</th><th>Token Hash</th><th>IP</th><th>Issued</th><th>Expires</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model)
+                    {
+                        <tr>
+                            <td class="small fw-semibold">@s.User.FullName <span class="text-muted">(@s.User.Email)</span></td>
+                            <td><span class="sn-role-badge">@s.User.Role</span></td>
+                            <td class="font-monospace small">@s.TokenHash[..14]…</td>
+                            <td class="small">@s.IpAddress</td>
+                            <td class="small">@s.CreatedAt.ToString("dd MMM HH:mm")</td>
+                            <td class="small">@s.ExpiresAt.ToString("dd MMM yyyy")</td>
+                            <td class="text-end">
+                                <form asp-action="RevokeAnySession" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@s.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Force Revoke</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

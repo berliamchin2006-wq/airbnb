@@ -1,0 +1,90 @@
+@model List<Property>
+@inject Helper Helper
+@{
+    ViewData["Title"] = "My Listings";
+}
+<div class="container-xl py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <span class="sn-eyebrow">Module 2 · Host Portfolio</span>
+            <h2 class="fw-bold mt-1 mb-0">My Property Listings</h2>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="BatchImport" class="btn sn-btn-ghost btn-sm"><i class="bi bi-filetype-csv me-1"></i>CSV Batch Import</a>
+            <a asp-action="Create" class="btn sn-btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Add Listing</a>
+        </div>
+    </div>
+
+    <form asp-action="BatchAction" method="post" class="sn-card p-4">
+        @Html.AntiForgeryToken()
+        <!-- Batch Operations Bar -->
+        <div class="d-flex flex-wrap align-items-center gap-2 pb-3 mb-3 border-bottom">
+            <span class="small fw-semibold text-muted me-2">Batch Operations:</span>
+            <select name="batchOperation" class="form-select form-select-sm" style="width:auto">
+                <option value="publish">Publish Selected</option>
+                <option value="unpublish">Unpublish Selected</option>
+                <option value="adjust_price">Adjust Price (%)</option>
+            </select>
+            <input name="pricePercent" type="number" class="form-control form-control-sm" style="width:120px" placeholder="+10 / -10 %" />
+            <button type="submit" class="btn sn-btn-dark btn-sm">Apply to Selected</button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="small text-muted">
+                    <tr>
+                        <th><input type="checkbox" id="chkAllProps" class="form-check-input" /></th>
+                        <th>Listing</th>
+                        <th>City</th>
+                        <th>Rates (Base / Wknd)</th>
+                        <th>Seasonal Rules</th>
+                        <th>Rating</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model)
+                    {
+                        var cover = p.Photos.OrderByDescending(ph => ph.IsPrimary).FirstOrDefault()?.FileName;
+                        <tr>
+                            <td><input type="checkbox" name="selectedIds" value="@p.Id" class="form-check-input prop-chk" /></td>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <img src="@Helper.ResolvePhotoUrl(cover, "properties")" class="rounded" style="width:60px;height:46px;object-fit:cover" />
+                                    <div>
+                                        <a asp-action="Details" asp-route-id="@p.Id" class="fw-semibold text-reset text-decoration-none">@p.Title</a>
+                                        <div class="small text-muted">@p.PropertyType · Max @p.MaxGuests guests</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="small">@p.City, @p.State</td>
+                            <td class="small">
+                                <strong>@Helper.FormatMoney(p.BaseNightlyRate)</strong> / @Helper.FormatMoney(p.CustomWeekendRate)
+                            </td>
+                            <td class="small">@p.SeasonalRates.Count rule(s)</td>
+                            <td class="small">★ @(p.ReviewCount > 0 ? $"{p.AverageRating:0.0} ({p.ReviewCount})" : "New")</td>
+                            <td>
+                                <span class="sn-status @(p.IsActive ? "sn-status-Verified" : "sn-status-Unverified")">
+                                    @(p.IsActive ? "Published" : "Hidden")
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm sn-btn-ghost">Edit</a>
+                                <button type="submit" formaction="@Url.Action("Delete", "Property", new { id = p.Id })" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this listing?')">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('chkAllProps')?.addEventListener('change', e => {
+            document.querySelectorAll('.prop-chk').forEach(c => c.checked = e.target.checked);
+        });
+    </script>
+}

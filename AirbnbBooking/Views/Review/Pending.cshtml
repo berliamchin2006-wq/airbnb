@@ -1,0 +1,97 @@
+@model List<Booking>
+@inject Helper Helper
+@{
+    ViewData["Title"] = "Mutual Reviews & Reputation";
+    int uid = Helper.GetCurrentUserId() ?? 0;
+    string role = Helper.GetCurrentUserRole();
+}
+<div class="container-xl py-4">
+    <div class="mb-4">
+        <span class="sn-eyebrow">Module 6 · Double-Blind Mutual Reviews</span>
+        <h2 class="fw-bold mt-1 mb-1">Post-Stay Reviews &amp; Reputation</h2>
+        <p class="small text-muted mb-0">To guarantee fair, unbiased feedback, reviews stay hidden until <strong>both Guest and Host submit</strong> or the <strong>14-day review window</strong> expires.</p>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="sn-card p-5 text-center text-muted">No completed stays ready for review yet.</div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var b in Model)
+            {
+                bool isGuest = b.GuestId == uid;
+                bool isHost = b.Property.HostId == uid || role == "Admin";
+                var r = b.Review;
+                bool guestDone = r?.GuestSubmittedAt != null;
+                bool hostDone = r?.HostSubmittedAt != null;
+
+                <div class="col-lg-6">
+                    <div class="sn-card p-4 h-100 d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <div class="small font-monospace text-muted">@b.BookingReference · Checked out @b.CheckOutDate.ToString("dd MMM yyyy")</div>
+                                <h5 class="fw-bold mb-0">@b.Property.Title</h5>
+                                <div class="small text-muted">Guest: @b.Guest.FullName · Host: @b.Property.Host.FullName</div>
+                            </div>
+                            @if (r?.IsPublished == true)
+                            {
+                                <span class="sn-status sn-status-Verified">Published Live</span>
+                            }
+                            else if (guestDone || hostDone)
+                            {
+                                <span class="sn-status sn-status-Pending">Blind-Locked</span>
+                            }
+                            else
+                            {
+                                <span class="sn-status sn-status-Unverified">Awaiting Reviews</span>
+                            }
+                        </div>
+
+                        <div class="sn-soft-box p-3 small mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Guest 4-Criteria Review:</span>
+                                <strong>@(guestDone ? $"Submitted ({r!.GuestSubmittedAt:dd MMM})" : "Pending")</strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Host Mutual Rating:</span>
+                                <strong>@(hostDone ? $"Submitted ({r!.HostSubmittedAt:dd MMM})" : "Pending")</strong>
+                            </div>
+                            @if (r != null && !r.IsPublished)
+                            {
+                                <div class="text-warning-emphasis mt-2 pt-2 border-top">
+                                    <i class="bi bi-eye-slash me-1"></i>Content stays blind until both parties submit or window expires on <strong>@r.PublishDeadline.ToString("dd MMM yyyy")</strong>.
+                                </div>
+                            }
+                        </div>
+
+                        @if (r?.IsPublished == true)
+                        {
+                            <div class="small mb-3">
+                                <div class="fw-bold text-warning mb-1">★ @r.OverallRating.ToString("0.00") / 5.00 <span class="text-muted fw-normal">(Cleanliness @r.CleanlinessRating · Accuracy @r.AccuracyRating · Comm @r.CommunicationRating · Location @r.LocationRating)</span></div>
+                                <p class="mb-1">"@r.Comment"</p>
+                                @if (r.HostRatingForGuest.HasValue)
+                                {
+                                    <div class="text-muted">Host rated guest: <strong>@r.HostRatingForGuest/5</strong> — @r.HostFeedbackForGuest</div>
+                                }
+                            </div>
+                        }
+
+                        <div class="mt-auto d-flex flex-wrap gap-2">
+                            @if (isGuest && !guestDone)
+                            {
+                                <a asp-action="WriteGuestReview" asp-route-bookingId="@b.Id" class="btn sn-btn-primary btn-sm"><i class="bi bi-star me-1"></i>Write Guest Review</a>
+                            }
+                            @if (isHost && !hostDone)
+                            {
+                                <a asp-action="WriteHostReview" asp-route-bookingId="@b.Id" class="btn sn-btn-dark btn-sm"><i class="bi bi-award me-1"></i>Submit Host Review @(guestDone ? "(Unlock Both!)" : "")</a>
+                            }
+                            <a asp-controller="Property" asp-action="Details" asp-route-id="@b.PropertyId" class="btn sn-btn-ghost btn-sm">View Listing</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

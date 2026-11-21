@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none">
+  <rect width="800" height="500" fill="#F1F5F9"/>
+  <path d="M400 160L290 250h35v105h55v-65h40v65h55V250h35L400 160z" fill="#CBD5E1"/>
+  <text x="400" y="405" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="22" fill="#64748B">StayNest Property</text>
+</svg>

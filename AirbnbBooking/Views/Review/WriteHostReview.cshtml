@@ -1,0 +1,45 @@
+@model HostReviewViewModel
+@{
+    ViewData["Title"] = "Host Mutual Review";
+}
+<div class="container-xl py-4" style="max-width:660px">
+    <div class="sn-card p-4 p-md-5">
+        <span class="sn-eyebrow">Module 6 · Mutual Host Review</span>
+        <h2 class="fw-bold mt-2 mb-1">Review Guest: @Model.GuestName</h2>
+        <p class="small text-muted mb-4">Stay at @Model.PropertyTitle. Submitting your review unlocks mutual publication if the guest has already reviewed.</p>
+
+        <form asp-action="WriteHostReview" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="BookingId" />
+            <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+            <div class="d-flex justify-content-between align-items-center sn-soft-box px-3 py-2 mb-3">
+                <span class="fw-semibold small">Overall Guest Rating</span>
+                <div class="sn-star-input">
+                    @for (int s = 5; s >= 1; s--)
+                    {
+                        <input type="radio" id="hr_@s" name="HostRatingForGuest" value="@s" checked="@(Model.HostRatingForGuest == s)" />
+                        <label for="hr_@s">★</label>
+                    }
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="HostFeedbackForGuest" class="form-label small fw-semibold"></label>
+                <textarea asp-for="HostFeedbackForGuest" rows="3" class="form-control" placeholder="Was the guest respectful of house rules and tidy?"></textarea>
+                <span asp-validation-for="HostFeedbackForGuest" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="HostReply" class="form-label small fw-semibold"></label>
+                <textarea asp-for="HostReply" rows="2" class="form-control" placeholder="Optional thank-you note displayed publicly below their review"></textarea>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn sn-btn-primary px-4">Submit &amp; Unlock Mutual Review</button>
+                <a asp-action="Pending" class="btn sn-btn-ghost">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -1,0 +1,36 @@
+@{
+    ViewData["Title"] = "Privacy & Security Policy";
+}
+<div class="container-xl py-4" style="max-width:840px">
+    <div class="sn-card p-4 p-md-5">
+        <span class="sn-eyebrow">Module 8 · Trust &amp; Safety</span>
+        <h1 class="fw-bold mt-2 mb-3">Privacy, Encryption &amp; Platform Security</h1>
+        <p class="text-muted">StayNest Airbnb Booking System protects guest and host data using defense-in-depth engineering controls:</p>
+        <div class="row g-3 mt-3">
+            <div class="col-md-6">
+                <div class="sn-soft-box p-3 h-100">
+                    <h6 class="fw-bold"><i class="bi bi-shield-lock text-danger me-2"></i>Authentication &amp; RBAC/ABAC</h6>
+                    <p class="small text-muted mb-0">Manual HttpOnly cookie authentication paired with salted PBKDF2 password hashing, rotating refresh tokens, 3-strike temporary lockout, and host resource-ownership checks.</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="sn-soft-box p-3 h-100">
+                    <h6 class="fw-bold"><i class="bi bi-key text-danger me-2"></i>AES-256 Encryption at Rest</h6>
+                    <p class="small text-muted mb-0">Sensitive host banking and payout account numbers are encrypted using AES-256 before persistence and displayed masked in the UI.</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="sn-soft-box p-3 h-100">
+                    <h6 class="fw-bold"><i class="bi bi-speedometer2 text-danger me-2"></i>Rate Limiting &amp; Anti-Bot</h6>
+                    <p class="small text-muted mb-0">Custom sliding-window IP rate limiting guards login, registration, password reset, booking, and payment routes alongside a server-backed CAPTCHA.</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="sn-soft-box p-3 h-100">
+                    <h6 class="fw-bold"><i class="bi bi-journal-check text-danger me-2"></i>Comprehensive Audit Trail</h6>
+                    <p class="small text-muted mb-0">Every authentication, payment capture, refund, payout disbursement, and administrative moderation event is logged with timestamp, actor, and IP address.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

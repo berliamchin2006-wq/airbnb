@@ -1,0 +1,135 @@
+@model List<ServiceRequest>
+@inject Helper Helper
+@{
+    ViewData["Title"] = "In-Stay Service Requests & Issues";
+    string role = Helper.GetCurrentUserRole();
+    var guestBookings = ViewBag.GuestBookings as List<Booking> ?? [];
+}
+<div class="container-xl py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <span class="sn-eyebrow">Module 5 · Guest Support</span>
+            <h2 class="fw-bold mt-1 mb-0">In-Stay Service Requests &amp; Issue Tracker</h2>
+        </div>
+        <a asp-action="Index" class="btn sn-btn-ghost btn-sm">Back to Operations</a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Log New Request (Guests) -->
+        @if (guestBookings.Any())
+        {
+            <div class="col-lg-4">
+                <div class="sn-card p-4">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-plus-circle text-danger me-2"></i>Log Service Request</h5>
+                    <form asp-action="CreateRequest" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold">Stay / Booking</label>
+                            <select name="BookingId" class="form-select form-select-sm" required>
+                                @foreach (var b in guestBookings)
+                                {
+                                    <option value="@b.Id">@b.BookingReference — @b.Property.Title</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-7">
+                                <label class="form-label small fw-semibold">Category</label>
+                                <select name="Category" class="form-select form-select-sm">
+                                    <option>Housekeeping</option>
+                                    <option>Extra Amenities</option>
+                                    <option>Air-Conditioning</option>
+                                    <option>Wi-Fi &amp; Tech</option>
+                                    <option>Plumbing</option>
+                                    <option>Safety / Dispute</option>
+                                </select>
+                            </div>
+                            <div class="col-5">
+                                <label class="form-label small fw-semibold">Priority</label>
+                                <select name="Priority" class="form-select form-select-sm">
+                                    <option>Low</option>
+                                    <option selected>Medium</option>
+                                    <option>High</option>
+                                    <option>Urgent</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold">Summary</label>
+                            <input name="IssueTitle" class="form-control form-control-sm" placeholder="e.g. Extra towels or AC remote" required minlength="4" />
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold">Details</label>
+                            <textarea name="Description" rows="3" class="form-control form-control-sm" required minlength="10"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Photo Proof (Optional)</label>
+                            <input name="PhotoProofFile" type="file" accept="image/*" class="form-control form-control-sm" />
+                        </div>
+                        <button type="submit" class="btn sn-btn-primary btn-sm w-100">Submit Request</button>
+                    </form>
+                </div>
+            </div>
+        }
+
+        <div class="@(guestBookings.Any() ? "col-lg-8" : "col-12")">
+            @if (!Model.Any())
+            {
+                <div class="sn-card p-5 text-center text-muted">No service requests logged yet.</div>
+            }
+            @foreach (var sr in Model)
+            {
+                <div class="sn-card p-4 mb-3">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                        <div>
+                            <span class="badge bg-light text-dark border me-1">@sr.Category</span>
+                            <span class="badge @(sr.Priority is "Urgent" or "High" ? "bg-danger" : "bg-secondary")">@sr.Priority</span>
+                            <h6 class="fw-bold mt-2 mb-0">@sr.IssueTitle</h6>
+                            <div class="small text-muted">@sr.Booking.Property.Title (@sr.Booking.BookingReference) · Reported by @sr.Guest.FullName on @sr.CreatedAt.ToString("dd MMM yyyy HH:mm")</div>
+                        </div>
+                        <span class="sn-status sn-status-@sr.Status">@sr.Status</span>
+                    </div>
+                    <p class="small mb-2">@sr.Description</p>
+                    @if (!string.IsNullOrEmpty(sr.PhotoProof))
+                    {
+                        <img src="@Helper.ResolvePhotoUrl(sr.PhotoProof, "issues")" class="rounded mb-2" style="max-height:140px" />
+                    }
+                    @if (!string.IsNullOrEmpty(sr.HostResponse))
+                    {
+                        <div class="sn-soft-box p-2 px-3 small mb-2">
+                            <strong>Host Response:</strong> @sr.HostResponse
+                            @if (sr.RepairCost > 0) { <span class="ms-2 text-muted">(Cost: RM @sr.RepairCost.ToString("N2"))</span> }
+                        </div>
+                    }
+                    @if (role is "Host" or "Admin")
+                    {
+                        <form asp-action="UpdateRequest" method="post" class="row g-2 align-items-end pt-2 border-top mt-2">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@sr.Id" />
+                            <div class="col-md-3">
+                                <label class="small text-muted">Status</label>
+                                <select name="status" class="form-select form-select-sm">
+                                    @foreach (var st in new[] { "Open", "InProgress", "Resolved", "Escalated" })
+                                    {
+                                        <option value="@st" selected="@(sr.Status == st)">@st</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="small text-muted">Response / Resolution</label>
+                                <input name="hostResponse" value="@sr.HostResponse" class="form-control form-control-sm" placeholder="Update guest..." />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="small text-muted">Cost (RM)</label>
+                                <input name="repairCost" type="number" step="0.01" value="@sr.RepairCost" class="form-control form-control-sm" />
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn sn-btn-dark btn-sm w-100">Update</button>
+                            </div>
+                        </form>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>

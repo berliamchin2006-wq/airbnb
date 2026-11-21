@@ -1,0 +1,54 @@
+@model List<Wishlist>
+@inject Helper Helper
+@{
+    ViewData["Title"] = "Saved Wishlists";
+    var grouped = Model.GroupBy(w => w.FolderName).ToList();
+}
+<div class="container-xl py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <span class="sn-eyebrow">Module 2 · Favorites</span>
+            <h2 class="fw-bold mt-1 mb-0">Saved Wishlists</h2>
+        </div>
+        <a asp-action="Catalog" class="btn sn-btn-primary btn-sm">Explore More Stays</a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="sn-card p-5 text-center">
+            <i class="bi bi-heart display-5 text-muted"></i>
+            <h5 class="fw-bold mt-3">Your wishlist is empty</h5>
+            <p class="small text-muted">Tap the heart icon on any listing to save it for your next trip.</p>
+            <a asp-action="Catalog" class="btn sn-btn-primary btn-sm">Browse Stays</a>
+        </div>
+    }
+    else
+    {
+        @foreach (var grp in grouped)
+        {
+            <h5 class="fw-bold mb-3">@grp.Key (@grp.Count())</h5>
+            <div class="row g-4 mb-4">
+                @foreach (var item in grp)
+                {
+                    var p = item.Property;
+                    var cover = p.Photos.OrderByDescending(ph => ph.IsPrimary).FirstOrDefault()?.FileName;
+                    <div class="col-md-6 col-lg-4">
+                        <div class="sn-prop-card">
+                            <div class="sn-prop-media">
+                                <a asp-action="Details" asp-route-id="@p.Id">
+                                    <img src="@Helper.ResolvePhotoUrl(cover, "properties")" alt="@p.Title" />
+                                </a>
+                                <button type="button" class="sn-wish-btn saved" data-property-id="@p.Id"><i class="bi bi-heart-fill"></i></button>
+                            </div>
+                            <div class="p-3">
+                                <div class="small text-muted">@p.City, @p.State</div>
+                                <a asp-action="Details" asp-route-id="@p.Id" class="fw-bold text-reset text-decoration-none">@p.Title</a>
+                                <div class="mt-2 fw-bold">@Helper.FormatMoney(p.BaseNightlyRate) <span class="small fw-normal text-muted">/ night</span></div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>

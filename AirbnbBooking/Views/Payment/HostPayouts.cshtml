@@ -1,0 +1,61 @@
+@model List<HostPayout>
+@inject Helper Helper
+@{
+    ViewData["Title"] = "Host Payout Ledger";
+    decimal totalDisbursed = Model.Where(p => p.Status == "Disbursed").Sum(p => p.NetPayoutAmount);
+    decimal totalPending = Model.Where(p => p.Status == "Pending").Sum(p => p.NetPayoutAmount);
+    decimal totalFees = Model.Where(p => p.Status != "Reversed").Sum(p => p.PlatformFee);
+}
+<div class="container-xl py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <span class="sn-eyebrow">Module 4 · Payout Accounting</span>
+            <h2 class="fw-bold mt-1 mb-0">Host Earnings &amp; Payout Ledger</h2>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-controller="Account" asp-action="Profile" class="btn sn-btn-ghost btn-sm"><i class="bi bi-bank me-1"></i>Bank: @ViewBag.BankName (@ViewBag.MaskedBank)</a>
+            <a asp-action="ExportPayoutsCsv" class="btn sn-btn-dark btn-sm"><i class="bi bi-download me-1"></i>Export CSV</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4"><div class="sn-kpi"><div class="small text-muted">Disbursed Earnings</div><div class="fs-4 fw-bold text-success mt-1">@Helper.FormatMoney(totalDisbursed)</div></div></div>
+        <div class="col-md-4"><div class="sn-kpi"><div class="small text-muted">Pending Settlement</div><div class="fs-4 fw-bold text-warning mt-1">@Helper.FormatMoney(totalPending)</div></div></div>
+        <div class="col-md-4"><div class="sn-kpi"><div class="small text-muted">Host Platform Fees (3%)</div><div class="fs-4 fw-bold mt-1">@Helper.FormatMoney(totalFees)</div></div></div>
+    </div>
+
+    <div class="sn-card p-4">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="small text-muted">
+                    <tr>
+                        <th>Payout Ref</th>
+                        <th>Booking &amp; Property</th>
+                        <th>Gross</th>
+                        <th>Host Fee (3%)</th>
+                        <th>Net Payout</th>
+                        <th>Scheduled</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model)
+                    {
+                        <tr>
+                            <td class="font-monospace small fw-semibold">@p.PayoutReference</td>
+                            <td class="small">
+                                <div class="fw-semibold">@p.Booking.Property.Title</div>
+                                <div class="text-muted">@p.Booking.BookingReference · @p.Booking.Guest.FullName</div>
+                            </td>
+                            <td class="small">@Helper.FormatMoney(p.GrossAmount)</td>
+                            <td class="small text-muted">-@Helper.FormatMoney(p.PlatformFee)</td>
+                            <td class="small fw-bold">@Helper.FormatMoney(p.NetPayoutAmount)</td>
+                            <td class="small">@p.ScheduledDate.ToString("dd MMM yyyy")</td>
+                            <td><span class="sn-status sn-status-@p.Status">@p.Status</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

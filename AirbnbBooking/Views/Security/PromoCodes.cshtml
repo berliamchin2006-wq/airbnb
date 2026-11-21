@@ -1,0 +1,86 @@
+@model List<PromoCode>
+@{
+    ViewData["Title"] = "Promo Codes";
+}
+<div class="container-xl py-4">
+    <span class="sn-eyebrow">Module 4 &amp; 8 · Promotional Vouchers</span>
+    <h2 class="fw-bold mt-1 mb-4">Promo &amp; Voucher Codes</h2>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="sn-card p-4">
+                <h5 class="fw-bold mb-3">Create New Voucher</h5>
+                <form asp-action="SavePromoCode" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Code (UPPERCASE)</label>
+                        <input name="Code" class="form-control form-control-sm text-uppercase" placeholder="MERDEKA20" required />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Description</label>
+                        <input name="Description" class="form-control form-control-sm" placeholder="20% off Merdeka holidays" required />
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Type</label>
+                            <select name="DiscountType" class="form-select form-select-sm">
+                                <option value="Percent">Percent (%)</option>
+                                <option value="Fixed">Fixed (RM)</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Value</label>
+                            <input name="DiscountValue" type="number" step="0.01" value="15" class="form-control form-control-sm" required />
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Min Spend (RM)</label>
+                            <input name="MinSpend" type="number" value="200" class="form-control form-control-sm" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Max Uses</label>
+                            <input name="MaxUses" type="number" value="100" class="form-control form-control-sm" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Expiry Date</label>
+                        <input name="ExpiryDate" type="date" value="@DateTime.Today.AddMonths(6).ToString("yyyy-MM-dd")" class="form-control form-control-sm" required />
+                    </div>
+                    <button type="submit" class="btn sn-btn-primary btn-sm w-100">Create Promo Code</button>
+                </form>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="sn-card p-4">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="small text-muted">
+                            <tr><th>Code</th><th>Discount</th><th>Min Spend</th><th>Usage</th><th>Expiry</th><th>Status</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in Model)
+                            {
+                                <tr>
+                                    <td class="font-monospace fw-bold">@c.Code<div class="small fw-normal text-muted font-sans">@c.Description</div></td>
+                                    <td class="small fw-semibold">@(c.DiscountType == "Percent" ? $"{c.DiscountValue}%" : $"RM {c.DiscountValue:N2}")</td>
+                                    <td class="small">RM @c.MinSpend.ToString("N2")</td>
+                                    <td class="small">@c.CurrentUses / @c.MaxUses</td>
+                                    <td class="small">@c.ExpiryDate.ToString("dd MMM yyyy")</td>
+                                    <td><span class="sn-status @(c.IsActive ? "sn-status-Verified" : "sn-status-Cancelled")">@(c.IsActive ? "Active" : "Disabled")</span></td>
+                                    <td class="text-end">
+                                        <form asp-action="TogglePromoCode" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@c.Id" />
+                                            <button type="submit" class="btn btn-sm sn-btn-ghost">Toggle</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
