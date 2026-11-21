@@ -2,8 +2,53 @@
 @inject Helper Helper
 @{
     var p = Model.Property;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     ViewData["Title"] = p.Title;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     var photos = p.Photos.OrderByDescending(ph => ph.IsPrimary).ThenBy(ph => ph.DisplayOrder).ToList();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     string mainImg = Helper.ResolveOptimizedPhotoUrl(photos.FirstOrDefault()?.FileName, "properties", 960, 640);
     bool hasMultiplePhotos = photos.Count > 1;
     string policySummary = p.CancellationPolicy switch
@@ -77,6 +122,21 @@
                 <h2 class="h5 fw-bold mb-3">Amenities included</h2>
                 <div class="row g-2 mb-4">
                     @foreach (var pa in p.PropertyAmenities)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     {
                         <div class="col-6 col-md-4">
                             <div class="sn-soft-box px-3 py-2 small d-flex align-items-center gap-2">
@@ -88,13 +148,49 @@
                 </div>
 
                 @if (p.SeasonalRates.Any())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 {
                     <h2 class="h5 fw-bold mb-2">Seasonal &amp; Holiday Rates</h2>
                     <div class="table-responsive mb-4">
                         <table class="table table-sm small mb-0">
-                            <thead><tr><th>Season</th><th>Dates</th><th>Nightly Rate</th></tr></thead>
+                            <thead>
+                                <tr>
+                                    <th>Season</th>
+                                    <th>Dates</th>
+                                    <th>Nightly Rate</th>
+                                </tr>
+                            </thead>
                             <tbody>
                                 @foreach (var sr in p.SeasonalRates)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                                 {
                                     <tr>
                                         <td class="fw-semibold">@sr.SeasonName</td>
@@ -131,9 +227,40 @@
                 </div>
 
                 @if (Model.PublishedReviews.Count > 0)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 {
                     <div class="row g-3 mb-4">
-                        @foreach (var metric in new[] { ("Cleanliness", Model.AvgCleanliness), ("Accuracy", Model.AvgAccuracy), ("Communication", Model.AvgCommunication), ("Location", Model.AvgLocation) })
+                        @foreach (var metric in new[] { ("Cleanliness", Model.AvgCleanliness), ("Accuracy",
+                    Model.AvgAccuracy), ("Communication", Model.AvgCommunication), ("Location", Model.AvgLocation) })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                         {
                             <div class="col-6 col-md-3">
                                 <div class="sn-soft-box p-2 text-center sn-num">
@@ -145,6 +272,7 @@
                     </div>
 
                     @foreach (var rev in Model.PublishedReviews)
+
                     {
                         <div class="border-top pt-3 mt-3">
                             <div class="d-flex justify-content-between align-items-start">
@@ -156,10 +284,12 @@
                             </div>
                             <p class="small mt-2 mb-2">@rev.Comment</p>
                             @if (!string.IsNullOrEmpty(rev.PhotoPath))
+
                             {
                                 <img src="@Helper.ResolvePhotoUrl(rev.PhotoPath, "reviews")" alt="Photo submitted by @rev.Guest.FullName" loading="lazy" decoding="async" class="rounded mb-2" style="max-height:130px" />
                             }
                             @if (!string.IsNullOrEmpty(rev.HostReply))
+
                             {
                                 <div class="sn-soft-box p-2 px-3 small mb-2">
                                     <strong>Host reply:</strong> @rev.HostReply
@@ -170,19 +300,65 @@
                                     <i class="bi bi-hand-thumbs-up me-1" aria-hidden="true"></i>Helpful (<span class="vote-count sn-num">@rev.HelpfulVotes</span>)
                                 </button>
                                 @if (User.Identity?.IsAuthenticated == true)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                                 {
                                     <form asp-controller="Review" asp-action="FlagReview" method="post" class="d-inline" onsubmit="return confirm('Report this review to StayNest moderators?')">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@rev.Id" />
                                         <input type="hidden" name="reason" value="Reported by user from listing page" />
-                                        <button type="submit" class="btn btn-link btn-sm p-0 text-decoration-none text-muted">Report</button>
+                                        <button type="submit"
+                                            class="btn btn-link btn-sm p-0 text-decoration-none text-muted">Report</button>
                                     </form>
                                 }
                             </div>
                         </div>
                     }
                 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 else
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 {
                     <p class="small text-muted mb-0">No published reviews yet. Reviews appear automatically once both guest and host submit or after the 14-day review window.</p>
                 }
@@ -210,7 +386,8 @@
                     <div class="d-grid text-center small text-muted mb-1" style="grid-template-columns:repeat(7,1fr);font-size:.72rem" aria-hidden="true">
                         <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
                     </div>
-                    <div id="calGrid" class="d-grid gap-1 text-center" style="grid-template-columns:repeat(7,1fr)"></div>
+                    <div id="calGrid" class="d-grid gap-1 text-center" style="grid-template-columns:repeat(7,1fr)">
+                    </div>
                     <div class="d-flex justify-content-between mt-2 pt-2 border-top" style="font-size:.72rem">
                         <span class="text-muted"><span class="d-inline-block rounded-circle me-1" style="width:7px;height:7px;background:var(--sn-accent)"></span>Selected</span>
                         <span class="text-muted"><span class="d-inline-block rounded-circle bg-secondary opacity-50 me-1" style="width:7px;height:7px"></span>Unavailable</span>
@@ -230,11 +407,17 @@
                     <div class="row g-2 mb-2">
                         <div class="col-6">
                             <label for="bkCheckIn" class="form-label small fw-semibold mb-1">Check-In</label>
-                            <input type="date" id="bkCheckIn" name="CheckInDate" value="@Model.BookingForm.CheckInDate.ToString("yyyy-MM-dd")" min="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control form-control-sm" required />
+                            <input type="date" id="bkCheckIn" name="CheckInDate"
+                                value="@Model.BookingForm.CheckInDate.ToString("yyyy-MM-dd")"
+                                min="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control form-control-sm"
+                                required />
                         </div>
                         <div class="col-6">
                             <label for="bkCheckOut" class="form-label small fw-semibold mb-1">Check-Out</label>
-                            <input type="date" id="bkCheckOut" name="CheckOutDate" value="@Model.BookingForm.CheckOutDate.ToString("yyyy-MM-dd")" min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")" class="form-control form-control-sm" required />
+                            <input type="date" id="bkCheckOut" name="CheckOutDate"
+                                value="@Model.BookingForm.CheckOutDate.ToString("yyyy-MM-dd")"
+                                min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")"
+                                class="form-control form-control-sm" required />
                         </div>
                     </div>
 
@@ -272,10 +455,55 @@
                     </div>
 
                     @if (User.Identity?.IsAuthenticated == true)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     {
                         <button type="submit" id="reserveBtn" class="btn sn-btn-primary w-100 py-2">Reserve &amp; Continue to Payment</button>
                     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     else
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     {
                         <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@($"/Property/Details/{p.Id}?checkIn={Model.BookingForm.CheckInDate:yyyy-MM-dd}&checkOut={Model.BookingForm.CheckOutDate:yyyy-MM-dd}&guests={Model.BookingForm.GuestCount}")" class="btn sn-btn-primary w-100 py-2">Sign In to Reserve</a>
                     }

@@ -75,14 +75,25 @@ namespace AirbnbBooking.Controllers
                 query = query.Where(p => p.MaxGuests >= filter.Guests.Value);
             }
 
-            if (filter.MinPrice.HasValue)
+            // Convert MinPrice / MaxPrice from active display currency back to MYR for accurate filtering
+            string activeCurrency = _helper.GetActiveCurrency();
+            decimal toMyrRate = activeCurrency switch
             {
-                query = query.Where(p => p.BaseNightlyRate >= filter.MinPrice.Value);
+                "USD" => 4.45m,
+                "SGD" => 3.32m,
+                _ => 1m
+            };
+
+            if (filter.MinPrice.HasValue && filter.MinPrice.Value >= 0)
+            {
+                decimal minMyr = Math.Round(filter.MinPrice.Value * toMyrRate, 2);
+                query = query.Where(p => p.BaseNightlyRate >= minMyr);
             }
 
-            if (filter.MaxPrice.HasValue)
+            if (filter.MaxPrice.HasValue && filter.MaxPrice.Value > 0)
             {
-                query = query.Where(p => p.BaseNightlyRate <= filter.MaxPrice.Value);
+                decimal maxMyr = Math.Round(filter.MaxPrice.Value * toMyrRate, 2);
+                query = query.Where(p => p.BaseNightlyRate <= maxMyr);
             }
 
             // Amenity filtering (must contain all selected amenities)

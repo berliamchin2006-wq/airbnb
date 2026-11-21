@@ -26,17 +26,15 @@
 
 <script type="application/json" id="mapPinsJson">@Html.Raw(JsonSerializer.Serialize(mapPins))</script>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div class="small text-muted">
-        Showing <strong class="text-body sn-num">@Model.Results.Count</strong> of <strong class="text-body sn-num">@Model.TotalCount</strong> available @(Model.TotalCount == 1 ? "stay" : "stays")
-        @if (Model.CheckIn.HasValue && Model.CheckOut.HasValue)
-        {
-            <span class="ms-2 badge bg-success-subtle text-success">
-                <i class="bi bi-calendar-check me-1" aria-hidden="true"></i>Available @Model.CheckIn.Value.ToString("dd MMM") – @Model.CheckOut.Value.ToString("dd MMM")
-            </span>
-        }
-    </div>
-</div>
+<template id="gridSummaryText">
+    Showing <strong class="text-body sn-num">@Model.Results.Count</strong> of <strong class="text-body sn-num">@Model.TotalCount</strong> available @(Model.TotalCount == 1 ? "stay" : "stays")
+    @if (Model.CheckIn.HasValue && Model.CheckOut.HasValue)
+    {
+        <span class="ms-2 badge bg-success-subtle text-success">
+            <i class="bi bi-calendar-check me-1" aria-hidden="true"></i>Available @Model.CheckIn.Value.ToString("dd MMM") – @Model.CheckOut.Value.ToString("dd MMM")
+        </span>
+    }
+</template>
 
 @if (Model.Results.Count == 0)
 {

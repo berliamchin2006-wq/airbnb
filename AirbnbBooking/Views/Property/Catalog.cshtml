@@ -1,131 +1,199 @@
 @model PropertySearchViewModel
+@inject Helper Helper
 @{
     ViewData["Title"] = "Explore Malaysian Stays";
+    string curr = Helper.GetActiveCurrency();
+    string currSym = curr switch { "USD" => "$", "SGD" => "S$", _ => "RM" };
+    int secondaryFilterCount =
+        (!string.IsNullOrWhiteSpace(Model.City) ? 1 : 0) +
+        (!string.IsNullOrWhiteSpace(Model.PropertyType) ? 1 : 0) +
+        (Model.MinPrice.HasValue ? 1 : 0) +
+        (Model.MaxPrice.HasValue ? 1 : 0) +
+        Model.SelectedAmenityIds.Count;
 }
 <div class="container-xl py-4">
-    <!-- Hero Search & Discovery Banner -->
-    <section class="sn-hero mb-4">
-        <div class="row align-items-center g-3">
-            <div class="col-lg-8">
-                <h1 class="display-6 fw-bold mb-2">Find your next architectural stay across Malaysia</h1>
-                <p class="sn-hero-sub mb-0">Live date availability · Seasonal &amp; weekend pricing · Verified hosts · Instant QR check-in.</p>
-            </div>
-            <div class="col-lg-4 text-lg-end">
-                <button type="button" id="toggleMapBtn" class="btn btn-light fw-semibold rounded-pill px-4 py-2" aria-expanded="false" aria-controls="discoveryMapWrap">
-                    <i class="bi bi-map me-2 sn-link-accent" aria-hidden="true"></i><span id="toggleMapLabel">Show Map</span>
-                </button>
-            </div>
+    <!-- Editorial Malaysian Architectural Photo Hero -->
+    <section class="sn-hero mb-4" aria-label="Search architectural stays">
+        <div class="sn-hero-media" aria-hidden="true">
+            <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1440&h=520&q=78" alt="" width="1440" height="520" fetchpriority="high" decoding="async" />
         </div>
 
-        <!-- Dynamic AJAX Search Bar -->
-        <form id="searchForm" asp-action="Catalog" method="get" class="sn-hero-bar mt-4" role="search" aria-label="Search stays">
-            <input type="hidden" name="Page" id="searchPage" value="@Model.Page" />
-            <div class="row g-2 align-items-end">
-                <div class="col-md-3">
-                    <label for="searchQuery" class="form-label small fw-semibold mb-1">Destination or Keyword</label>
-                    <input type="text" id="searchQuery" name="Query" value="@Model.Query" class="form-control form-control-sm" placeholder="KLCC, Penang, Villa... (press /)" />
-                </div>
-                <div class="col-6 col-md-2">
-                    <label for="filterCheckIn" class="form-label small fw-semibold mb-1">Check-In</label>
-                    <input type="date" id="filterCheckIn" name="CheckIn" value="@Model.CheckIn?.ToString("yyyy-MM-dd")" min="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control form-control-sm ajax-trigger" />
-                </div>
-                <div class="col-6 col-md-2">
-                    <label for="filterCheckOut" class="form-label small fw-semibold mb-1">Check-Out</label>
-                    <input type="date" id="filterCheckOut" name="CheckOut" value="@Model.CheckOut?.ToString("yyyy-MM-dd")" min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")" class="form-control form-control-sm ajax-trigger" />
-                </div>
-                <div class="col-6 col-md-1">
-                    <label for="filterGuests" class="form-label small fw-semibold mb-1">Guests</label>
-                    <input type="number" id="filterGuests" name="Guests" value="@Model.Guests" min="1" max="30" class="form-control form-control-sm ajax-trigger" placeholder="2" />
-                </div>
-                <div class="col-6 col-md-2">
-                    <label for="filterType" class="form-label small fw-semibold mb-1">Property Type</label>
-                    <select id="filterType" name="PropertyType" class="form-select form-select-sm ajax-trigger">
-                        <option value="">All Types</option>
-                        @foreach (var t in new[] { "Condominium", "Villa", "Townhouse", "Chalet", "Studio", "Apartment", "Bungalow" })
-                        {
-                            <option value="@t" selected="@(Model.PropertyType == t)">@t</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-2 d-flex gap-2">
-                    <button type="submit" class="btn sn-btn-primary btn-sm flex-grow-1 text-nowrap px-3"><i class="bi bi-search me-1" aria-hidden="true"></i>Search</button>
-                    <a asp-action="Catalog" class="btn sn-btn-ghost btn-sm flex-shrink-0" aria-label="Reset all search filters" title="Reset filters"><i class="bi bi-x-lg" aria-hidden="true"></i></a>
-                </div>
-            </div>
+        <div class="mb-3 mb-md-4">
+            <h1 class="display-6 fw-bold mb-2">Architectural stays across Malaysia</h1>
+            <p class="sn-hero-sub mb-0">Villas, heritage shophouses, and skyline lofts—booked direct with verified hosts.</p>
+        </div>
 
-            <!-- Secondary Filter Row: City, Price Range, Sort, Amenities -->
-            <div class="row g-2 mt-2 pt-2 border-top align-items-center">
-                <div class="col-6 col-md-2">
-                    <select id="filterCity" name="City" aria-label="Filter by city" class="form-select form-select-sm ajax-trigger">
-                        <option value="">All Cities</option>
+        <!-- Unified Single-Row 44px Booking Search Bar (4 Core Decisions) -->
+        <form id="searchForm" asp-action="Catalog" method="get" class="sn-hero-bar" role="search" aria-label="Search stays">
+            <input type="hidden" name="Page" id="searchPage" value="@Model.Page" />
+
+            <div class="sn-search-grid">
+                <div class="sn-search-field-where">
+                    <label for="searchQuery" class="form-label small fw-semibold mb-1">Where</label>
+                    <input type="text" id="searchQuery" name="Query" value="@Model.Query" list="citySuggestions" class="form-control" placeholder="Search city, area, or stay..." autocomplete="off" />
+                    <datalist id="citySuggestions">
                         @foreach (var c in Model.AvailableCities)
                         {
-                            <option value="@c" selected="@(Model.City == c)">@c</option>
+                            <option value="@c"></option>
                         }
-                    </select>
+                    </datalist>
                 </div>
-                <div class="col-6 col-md-2">
-                    <input type="number" id="filterMinPrice" name="MinPrice" aria-label="Minimum nightly price in RM" value="@Model.MinPrice" class="form-control form-control-sm ajax-trigger" placeholder="Min RM/night" />
+
+                <div>
+                    <label for="filterCheckIn" class="form-label small fw-semibold mb-1">Check-In</label>
+                    <input type="date" id="filterCheckIn" name="CheckIn" value="@Model.CheckIn?.ToString("yyyy-MM-dd")" min="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control" />
                 </div>
-                <div class="col-6 col-md-2">
-                    <input type="number" id="filterMaxPrice" name="MaxPrice" aria-label="Maximum nightly price in RM" value="@Model.MaxPrice" class="form-control form-control-sm ajax-trigger" placeholder="Max RM/night" />
+
+                <div>
+                    <label for="filterCheckOut" class="form-label small fw-semibold mb-1">Check-Out</label>
+                    <input type="date" id="filterCheckOut" name="CheckOut" value="@Model.CheckOut?.ToString("yyyy-MM-dd")" min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")" class="form-control" />
                 </div>
-                <div class="col-6 col-md-2">
-                    <select id="filterSortBy" name="SortBy" aria-label="Sort listings" class="form-select form-select-sm ajax-trigger">
-                        <option value="featured" selected="@(Model.SortBy == "featured")">Sort: Featured</option>
-                        <option value="price_asc" selected="@(Model.SortBy == "price_asc")">Price: Low to High</option>
-                        <option value="price_desc" selected="@(Model.SortBy == "price_desc")">Price: High to Low</option>
-                        <option value="rating" selected="@(Model.SortBy == "rating")">Highest Rated</option>
-                        <option value="newest" selected="@(Model.SortBy == "newest")">Newest Listings</option>
-                    </select>
+
+                <div>
+                    <label for="filterGuests" class="form-label small fw-semibold mb-1">Guests</label>
+                    <input type="number" id="filterGuests" name="Guests" value="@Model.Guests" min="1" max="30" class="form-control" placeholder="2" />
                 </div>
-                <div class="col-md-4">
-                    <div class="dropdown">
-                        <button class="btn btn-sm sn-btn-ghost w-100 dropdown-toggle text-start" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
-                            <i class="bi bi-sliders me-1" aria-hidden="true"></i>Amenities (<span id="amenityCount">@Model.SelectedAmenityIds.Count</span>)
-                        </button>
-                        <div class="dropdown-menu sn-dropdown p-3" style="min-width:300px">
-                            <div class="row g-2">
-                                @foreach (var am in Model.AvailableAmenities)
-                                {
-                                    bool isChecked = Model.SelectedAmenityIds.Contains(am.Id);
-                                    <div class="col-6">
-                                        <label class="form-check small d-flex align-items-center gap-1 mb-0">
-                                            <input class="form-check-input ajax-trigger amenity-cb" type="checkbox" name="SelectedAmenityIds" value="@am.Id" checked="@isChecked" />
-                                            <i class="bi @am.IconClass sn-link-accent" aria-hidden="true"></i>
-                                            <span class="text-truncate">@am.Name</span>
-                                        </label>
-                                    </div>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </div>
+
+                <button type="submit" id="heroSearchBtn" class="btn sn-btn-primary sn-search-submit">
+                    <i class="bi bi-search me-2" aria-hidden="true"></i>Search
+                </button>
             </div>
+
+            <!-- Inline Validation Feedback (Prevents silent date/price/guest bypass) -->
+            <div id="searchValidationMsg" class="small text-danger mt-2 d-none" role="alert"></div>
         </form>
     </section>
 
-    <!-- Collapsible Spatial Map View (Leaflet lazy-loaded on demand) -->
+    <!-- Progressive-Disclosure Filters Drawer (Outside hero stacking context, linked via form="searchForm") -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="filtersDrawer" aria-labelledby="filtersDrawerTitle">
+        <div class="offcanvas-header border-bottom">
+            <h2 class="h5 fw-bold offcanvas-title" id="filtersDrawerTitle">Refine Your Stay</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close filters"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column gap-4">
+            <div>
+                <label for="filterCity" class="form-label small fw-semibold">City / Region</label>
+                <select id="filterCity" name="City" form="searchForm" class="form-select" style="height:44px">
+                    <option value="">All Malaysian Destinations</option>
+                    @foreach (var c in Model.AvailableCities)
+                    {
+                        <option value="@c" selected="@(Model.City == c)">@c</option>
+                    }
+                </select>
+            </div>
+
+            <div>
+                <label for="filterType" class="form-label small fw-semibold">Property Type</label>
+                <select id="filterType" name="PropertyType" form="searchForm" class="form-select" style="height:44px">
+                    <option value="">All Property Types</option>
+                    @foreach (var t in new[] { "Condominium", "Villa", "Townhouse", "Chalet", "Studio", "Apartment", "Bungalow" })
+                    {
+                        <option value="@t" selected="@(Model.PropertyType == t)">@t</option>
+                    }
+                </select>
+            </div>
+
+            <div>
+                <div class="form-label small fw-semibold mb-2">Nightly Price Range (@curr)</div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label for="filterMinPrice" class="form-label small text-muted mb-1">Min (@currSym)</label>
+                        <input type="number" id="filterMinPrice" name="MinPrice" form="searchForm" value="@Model.MinPrice" min="0" step="10" class="form-control" style="height:44px" placeholder="0" />
+                    </div>
+                    <div class="col-6">
+                        <label for="filterMaxPrice" class="form-label small text-muted mb-1">Max (@currSym)</label>
+                        <input type="number" id="filterMaxPrice" name="MaxPrice" form="searchForm" value="@Model.MaxPrice" min="0" step="10" class="form-control" style="height:44px" placeholder="Any" />
+                    </div>
+                </div>
+                <div id="priceValidationMsg" class="small text-danger mt-1 d-none" role="alert"></div>
+            </div>
+
+            <div>
+                <div class="form-label small fw-semibold mb-2">Amenities (<span id="drawerAmenityCount">@Model.SelectedAmenityIds.Count</span> selected)</div>
+                <div class="d-grid gap-2" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+                    @foreach (var am in Model.AvailableAmenities)
+                    {
+                        bool isChecked = Model.SelectedAmenityIds.Contains(am.Id);
+                        <label class="sn-amenity-opt">
+                            <input class="form-check-input mt-0 amenity-cb" type="checkbox" name="SelectedAmenityIds" form="searchForm" value="@am.Id" data-label="@am.Name" checked="@isChecked" />
+                            <i class="bi @am.IconClass sn-link-accent" aria-hidden="true"></i>
+                            <span class="text-truncate">@am.Name</span>
+                        </label>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="p-3 border-top d-flex gap-2">
+            <button type="button" id="clearDrawerFiltersBtn" class="btn sn-btn-ghost flex-grow-1" style="height:44px">Clear Filters</button>
+            <button type="button" id="applyDrawerFiltersBtn" class="btn sn-btn-primary flex-grow-1" style="height:44px" data-bs-dismiss="offcanvas">Show Stays</button>
+        </div>
+    </div>
+
+    <!-- Results & Controls Toolbar (Directly Attached to Listings) -->
+    <div class="sn-results-toolbar">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <div id="resultsCountAnnouncer" class="small text-muted" aria-live="polite">
+                Showing <strong class="text-body sn-num">@Model.Results.Count</strong> of <strong class="text-body sn-num">@Model.TotalCount</strong> available @(Model.TotalCount == 1 ? "stay" : "stays")
+            </div>
+            <div id="activeFilterChips" class="d-flex flex-wrap align-items-center gap-2"></div>
+            <button type="button" id="resetAllFiltersBtn" class="btn btn-link btn-sm p-0 text-decoration-none sn-link-accent fw-semibold d-none">
+                Reset all
+            </button>
+        </div>
+
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <!-- Filters Drawer Trigger -->
+            <button type="button" id="openFiltersBtn" class="btn sn-btn-ghost sn-toolbar-control" data-bs-toggle="offcanvas" data-bs-target="#filtersDrawer" aria-controls="filtersDrawer">
+                <i class="bi bi-sliders" aria-hidden="true"></i>
+                <span>Filters</span>
+                <span id="filterBadge" class="badge rounded-pill @(secondaryFilterCount > 0 ? "" : "d-none")" style="background:var(--sn-accent);color:#fff">@secondaryFilterCount</span>
+            </button>
+
+            <!-- Persistent Sort Control -->
+            <div class="d-inline-flex align-items-center gap-2">
+                <label for="filterSortBy" class="small text-muted fw-semibold mb-0 text-nowrap">Sort by</label>
+                <select id="filterSortBy" name="SortBy" form="searchForm" class="form-select sn-toolbar-control" style="width:auto;padding-right:2.1rem">
+                    <option value="featured" selected="@(Model.SortBy == "featured")">Featured</option>
+                    <option value="price_asc" selected="@(Model.SortBy == "price_asc")">Price: Low to High</option>
+                    <option value="price_desc" selected="@(Model.SortBy == "price_desc")">Price: High to Low</option>
+                    <option value="rating" selected="@(Model.SortBy == "rating")">Highest Rated</option>
+                    <option value="newest" selected="@(Model.SortBy == "newest")">Newest</option>
+                </select>
+            </div>
+
+            <!-- Show Map Toggle (Theme-Safe, Attached to Listings) -->
+            <button type="button" id="toggleMapBtn" class="btn sn-btn-ghost sn-toolbar-control" aria-expanded="false" aria-controls="discoveryMapWrap">
+                <i class="bi bi-map sn-link-accent" aria-hidden="true"></i>
+                <span id="toggleMapLabel">Show Map</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Collapsible Spatial Map View (Leaflet Lazy-Loaded On Demand) -->
     <div id="discoveryMapWrap" class="sn-card p-2 mb-4 d-none">
         <div id="discoveryMap" style="height:380px;border-radius:12px;"></div>
     </div>
 
-    <!-- Live AJAX Results Container -->
-    <div id="catalogStatusError" class="alert sn-alert sn-alert-danger d-none mb-3" role="alert">
-        Unable to refresh listings right now. Please try again.
+    <!-- Error Recovery Alert with Retry -->
+    <div id="catalogStatusError" class="alert sn-alert sn-alert-danger d-none mb-3 d-flex justify-content-between align-items-center" role="alert">
+        <span>Unable to refresh listings right now.</span>
+        <button type="button" id="retrySearchBtn" class="btn btn-sm btn-outline-danger">Retry</button>
     </div>
-    <div id="catalogResults" aria-live="polite" aria-busy="false">
+
+    <!-- Live AJAX Results Container -->
+    <div id="catalogResults" aria-busy="false">
         <partial name="_PropertyCatalogGrid" model="Model" />
     </div>
 </div>
 
 @section Scripts {
     <script>
+        const activeCurrencySymbol = '@Html.Raw(currSym)';
         let discoveryMap = null;
         let mapMarkers = [];
         let leafletPromise = null;
 
-        // Lazy-load Leaflet CSS & JS only when user opens the map (saves 162 KB on initial load)
+        // 1. Lazy-load Leaflet only when user clicks Show Map
         function ensureLeaflet() {
             if (window.L) return Promise.resolve();
             if (leafletPromise) return leafletPromise;
@@ -198,15 +266,144 @@
             }
         });
 
+        // 2. Date Coupling & Strict Client-Side Validation (Zero Silent Availability Bypass)
+        const ciInput = document.getElementById('filterCheckIn');
+        const coInput = document.getElementById('filterCheckOut');
+        const guestsInput = document.getElementById('filterGuests');
+        const minPriceInput = document.getElementById('filterMinPrice');
+        const maxPriceInput = document.getElementById('filterMaxPrice');
+
+        function addDaysYmd(ymd, days) {
+            const d = new Date(ymd + 'T00:00:00');
+            d.setDate(d.getDate() + days);
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        ciInput?.addEventListener('change', () => {
+            if (ciInput.value) {
+                const minOut = addDaysYmd(ciInput.value, 1);
+                coInput.min = minOut;
+                if (!coInput.value || coInput.value <= ciInput.value) {
+                    coInput.value = minOut;
+                }
+            }
+            runAjaxSearch(true);
+        });
+        coInput?.addEventListener('change', () => runAjaxSearch(true));
+        guestsInput?.addEventListener('change', () => runAjaxSearch(true));
+
+        function validateSearchInputs() {
+            const msgEl = document.getElementById('searchValidationMsg');
+            const priceMsgEl = document.getElementById('priceValidationMsg');
+            msgEl.classList.add('d-none');
+            priceMsgEl.classList.add('d-none');
+
+            const ci = ciInput?.value;
+            const co = coInput?.value;
+            if ((ci && !co) || (!ci && co)) {
+                msgEl.textContent = 'Please select both Check-In and Check-Out dates to filter live availability.';
+                msgEl.classList.remove('d-none');
+                return false;
+            }
+            if (ci && co && co <= ci) {
+                msgEl.textContent = 'Check-Out date must be at least 1 night after Check-In.';
+                msgEl.classList.remove('d-none');
+                return false;
+            }
+
+            if (guestsInput?.value) {
+                const g = parseInt(guestsInput.value, 10);
+                if (isNaN(g) || g < 1 || g > 30) {
+                    msgEl.textContent = 'Guests must be between 1 and 30.';
+                    msgEl.classList.remove('d-none');
+                    return false;
+                }
+            }
+
+            const minP = minPriceInput?.value ? parseFloat(minPriceInput.value) : null;
+            const maxP = maxPriceInput?.value ? parseFloat(maxPriceInput.value) : null;
+            if ((minP !== null && minP < 0) || (maxP !== null && maxP < 0)) {
+                priceMsgEl.textContent = 'Price values cannot be negative.';
+                priceMsgEl.classList.remove('d-none');
+                return false;
+            }
+            if (minP !== null && maxP !== null && minP > maxP) {
+                priceMsgEl.textContent = 'Minimum price cannot exceed maximum price.';
+                priceMsgEl.classList.remove('d-none');
+                return false;
+            }
+            return true;
+        }
+
+        // 3. Active Filter Chips & Instant Badge Sync
+        function syncFilterChipsAndBadges() {
+            const chips = [];
+            const q = document.getElementById('searchQuery')?.value.trim();
+            const city = document.getElementById('filterCity')?.value;
+            const type = document.getElementById('filterType')?.value;
+            const ci = ciInput?.value;
+            const co = coInput?.value;
+            const g = guestsInput?.value;
+            const minP = minPriceInput?.value;
+            const maxP = maxPriceInput?.value;
+            const checkedAmenities = Array.from(document.querySelectorAll('.amenity-cb:checked'));
+
+            if (q) chips.push({ label: `"${q}"`, clear: () => { document.getElementById('searchQuery').value = ''; } });
+            if (ci && co) chips.push({ label: `${ci} to ${co}`, clear: () => { ciInput.value = ''; coInput.value = ''; } });
+            if (g) chips.push({ label: `${g} guests`, clear: () => { guestsInput.value = ''; } });
+            if (city) chips.push({ label: city, clear: () => { document.getElementById('filterCity').value = ''; } });
+            if (type) chips.push({ label: type, clear: () => { document.getElementById('filterType').value = ''; } });
+            if (minP || maxP) chips.push({
+                label: `${activeCurrencySymbol}${minP || '0'}–${maxP ? activeCurrencySymbol + maxP : 'Any'}`,
+                clear: () => { minPriceInput.value = ''; maxPriceInput.value = ''; }
+            });
+            checkedAmenities.forEach(cb => {
+                chips.push({ label: cb.dataset.label, clear: () => { cb.checked = false; } });
+            });
+
+            const secondaryCount = (city ? 1 : 0) + (type ? 1 : 0) + (minP ? 1 : 0) + (maxP ? 1 : 0) + checkedAmenities.length;
+            const badge = document.getElementById('filterBadge');
+            badge.textContent = secondaryCount;
+            badge.classList.toggle('d-none', secondaryCount === 0);
+            document.getElementById('drawerAmenityCount').textContent = checkedAmenities.length;
+
+            const chipsWrap = document.getElementById('activeFilterChips');
+            chipsWrap.innerHTML = '';
+            chips.forEach(c => {
+                const span = document.createElement('span');
+                span.className = 'sn-filter-chip';
+                span.innerHTML = `<span></span><button type="button" aria-label="Remove filter ${c.label}">&times;</button>`;
+                span.firstElementChild.textContent = c.label;
+                span.lastElementChild.addEventListener('click', () => { c.clear(); runAjaxSearch(true); });
+                chipsWrap.appendChild(span);
+            });
+
+            document.getElementById('resetAllFiltersBtn')?.classList.toggle('d-none', chips.length === 0);
+        }
+
+        // Instant amenity count feedback inside drawer before AJAX returns
+        document.querySelectorAll('.amenity-cb').forEach(cb => {
+            cb.addEventListener('change', () => {
+                document.getElementById('drawerAmenityCount').textContent =
+                    document.querySelectorAll('.amenity-cb:checked').length;
+            });
+        });
+
+        // 4. AJAX Search Engine + Clean URL Sync
         let debounceTimer = null;
         async function runAjaxSearch(resetPage = true) {
+            if (!validateSearchInputs()) return;
+            syncFilterChipsAndBadges();
+
             if (resetPage) document.getElementById('searchPage').value = 1;
             const form = document.getElementById('searchForm');
             const params = new URLSearchParams(new FormData(form));
             const resultsEl = document.getElementById('catalogResults');
             const errEl = document.getElementById('catalogStatusError');
 
-            // Sync filters into URL so browser Back preserves user's search
             const cleanParams = new URLSearchParams();
             for (const [k, v] of params.entries()) {
                 if (v && !(k === 'Page' && v === '1') && !(k === 'SortBy' && v === 'featured')) {
@@ -224,7 +421,10 @@
                 const res = await fetch('/Property/SearchAjax?' + params.toString());
                 if (!res.ok) throw new Error('Search failed');
                 resultsEl.innerHTML = await res.text();
-                document.getElementById('amenityCount').textContent = document.querySelectorAll('.amenity-cb:checked').length;
+                const summaryEl = resultsEl.querySelector('#gridSummaryText');
+                if (summaryEl) {
+                    document.getElementById('resultsCountAnnouncer').innerHTML = summaryEl.innerHTML;
+                }
                 renderDiscoveryMarkers();
             } catch {
                 errEl.classList.remove('d-none');
@@ -234,19 +434,39 @@
             }
         }
 
+        function resetAllFilters() {
+            document.getElementById('searchQuery').value = '';
+            ciInput.value = '';
+            coInput.value = '';
+            guestsInput.value = '';
+            document.getElementById('filterCity').value = '';
+            document.getElementById('filterType').value = '';
+            minPriceInput.value = '';
+            maxPriceInput.value = '';
+            document.getElementById('filterSortBy').value = 'featured';
+            document.querySelectorAll('.amenity-cb').forEach(c => c.checked = false);
+            runAjaxSearch(true);
+        }
+
         document.getElementById('searchForm')?.addEventListener('submit', e => {
             e.preventDefault();
             runAjaxSearch(true);
         });
-
         document.getElementById('searchQuery')?.addEventListener('input', () => {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => runAjaxSearch(true), 260);
         });
-
-        document.querySelectorAll('.ajax-trigger').forEach(el => {
-            el.addEventListener('change', () => runAjaxSearch(true));
+        document.getElementById('searchQuery')?.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && e.target.value) {
+                e.target.value = '';
+                runAjaxSearch(true);
+            }
         });
+        document.getElementById('filterSortBy')?.addEventListener('change', () => runAjaxSearch(true));
+        document.getElementById('applyDrawerFiltersBtn')?.addEventListener('click', () => runAjaxSearch(true));
+        document.getElementById('clearDrawerFiltersBtn')?.addEventListener('click', resetAllFilters);
+        document.getElementById('resetAllFiltersBtn')?.addEventListener('click', resetAllFilters);
+        document.getElementById('retrySearchBtn')?.addEventListener('click', () => runAjaxSearch(false));
 
         document.getElementById('catalogResults')?.addEventListener('click', e => {
             const pg = e.target.closest('.ajax-page-link');
@@ -257,5 +477,7 @@
             const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
             window.scrollTo({ top: 180, behavior: reduceMotion ? 'auto' : 'smooth' });
         });
+
+        syncFilterChipsAndBadges();
     </script>
 }
