@@ -242,6 +242,11 @@ namespace AirbnbBooking.Controllers
             int uid = _helper.GetCurrentUserId()!.Value;
             if (booking.GuestId != uid && _helper.GetCurrentUserRole() != "Admin")
                 return Forbid();
+            if (booking.Status is not ("Confirmed" or "CheckedIn" or "Completed"))
+            {
+                TempData["Error"] = $"Service requests are only allowed for confirmed, checked-in, or completed stays (current: {booking.Status}).";
+                return RedirectToAction(nameof(ServiceRequests));
+            }
 
             string? savedPhoto = null;
             if (vm.PhotoProofFile != null)
@@ -354,13 +359,29 @@ namespace AirbnbBooking.Controllers
 
             if (!string.IsNullOrWhiteSpace(messageText))
             {
+                string clean = messageText.Trim();
+                if (clean.Length > 1500) clean = clean[..1500];
                 _db.BookingMessages.Add(new BookingMessage
                 {
                     BookingId = bookingId,
                     SenderId = uid,
-                    MessageText = messageText.Trim(),
+                    MessageText = clean,
                     SentAt = DateTime.Now
                 });
+                int recipientId = uid == booking.GuestId ? booking.Property.HostId : booking.GuestId;
+                if (recipientId != uid)
+                {
+                    _db.Notifications.Add(new Notification
+                    {
+                        UserId = recipientId,
+                        Title = $"New Message from {_helper.GetCurrentUserFullName()}",
+                        Message = clean.Length > 80 ? clean[..80] + "..." : clean,
+                        Type = "Booking",
+                        LinkUrl = $"/Stay/Chat/{bookingId}",
+                        IsRead = false,
+                        CreatedAt = DateTime.Now
+                    });
+                }
                 await _db.SaveChangesAsync();
             }
 

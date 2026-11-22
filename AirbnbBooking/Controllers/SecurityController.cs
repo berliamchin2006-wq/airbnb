@@ -250,7 +250,11 @@ namespace AirbnbBooking.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SavePromoCode(PromoCodeFormViewModel vm)
         {
-            vm.Code = vm.Code.Trim().ToUpperInvariant();
+            vm.Code = (vm.Code ?? "").Trim().ToUpperInvariant();
+            if (vm.DiscountType == "Percent" && vm.DiscountValue > 100m)
+            {
+                ModelState.AddModelError(nameof(vm.DiscountValue), "Percentage discount cannot exceed 100%.");
+            }
             if (!ModelState.IsValid)
             {
                 TempData["Error"] = string.Join(" ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));

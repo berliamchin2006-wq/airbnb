@@ -395,6 +395,10 @@ namespace AirbnbBooking.Models
             {
                 yield return new ValidationResult("Please enter your eWallet mobile number.", [nameof(WalletPhone)]);
             }
+            else if (PaymentMethod != "Credit / Debit Card" && PaymentMethod != "FPX Online Banking" && PaymentMethod != "Touch 'n Go eWallet")
+            {
+                yield return new ValidationResult("Invalid payment method selected.", [nameof(PaymentMethod)]);
+            }
         }
     }
 

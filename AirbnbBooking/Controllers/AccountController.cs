@@ -66,8 +66,8 @@ namespace AirbnbBooking.Controllers
                 ModelState.AddModelError(nameof(vm.CaptchaAnswer), "Incorrect CAPTCHA answer. Please try again.");
             }
 
-            string normalizedEmail = vm.Email.Trim().ToLowerInvariant();
-            if (await _db.Users.AnyAsync(u => u.Email.ToLower() == normalizedEmail))
+            string normalizedEmail = (vm.Email ?? "").Trim().ToLowerInvariant();
+            if (!string.IsNullOrEmpty(normalizedEmail) && await _db.Users.AnyAsync(u => u.Email.ToLower() == normalizedEmail))
             {
                 ModelState.AddModelError(nameof(vm.Email), "An account with this email already exists.");
             }

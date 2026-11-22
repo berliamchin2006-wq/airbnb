@@ -370,8 +370,10 @@ namespace AirbnbBooking.Controllers
             decimal paidAmount = payment?.Amount ?? 0m;
             var refundCalc = _pricing.CalculateRefund(booking, paidAmount, DateTime.Now);
 
+            string cleanCancelReason = string.IsNullOrWhiteSpace(reason) ? "Cancelled by user" : reason.Trim();
+            if (cleanCancelReason.Length > 400) cleanCancelReason = cleanCancelReason[..400];
             booking.Status = "Cancelled";
-            booking.CancellationReason = string.IsNullOrWhiteSpace(reason) ? "Cancelled by user" : reason.Trim();
+            booking.CancellationReason = cleanCancelReason;
             booking.CancelledAt = DateTime.Now;
             booking.CancelledByUserId = uid;
 

@@ -289,10 +289,15 @@ namespace AirbnbBooking.Controllers
             _db.Properties.Add(prop);
             await _db.SaveChangesAsync();
 
-            // Amenity tagging
-            if (vm.SelectedAmenityIds != null)
+            // Amenity tagging (validate IDs exist to prevent FK violation)
+            if (vm.SelectedAmenityIds != null && vm.SelectedAmenityIds.Count > 0)
             {
-                foreach (var aid in vm.SelectedAmenityIds.Distinct())
+                var distinctIds = vm.SelectedAmenityIds.Distinct().ToList();
+                var validIds = await _db.Amenities
+                    .Where(a => distinctIds.Contains(a.Id))
+                    .Select(a => a.Id)
+                    .ToListAsync();
+                foreach (var aid in validIds)
                 {
                     _db.PropertyAmenities.Add(new PropertyAmenity { PropertyId = prop.Id, AmenityId = aid });
                 }
@@ -437,11 +442,16 @@ namespace AirbnbBooking.Controllers
             prop.HouseRules = vm.HouseRules.Trim();
             prop.IsActive = vm.IsActive;
 
-            // Replace amenity tags
+            // Replace amenity tags (validate IDs exist to prevent FK violation)
             _db.PropertyAmenities.RemoveRange(prop.PropertyAmenities);
-            if (vm.SelectedAmenityIds != null)
+            if (vm.SelectedAmenityIds != null && vm.SelectedAmenityIds.Count > 0)
             {
-                foreach (var aid in vm.SelectedAmenityIds.Distinct())
+                var distinctIds = vm.SelectedAmenityIds.Distinct().ToList();
+                var validIds = await _db.Amenities
+                    .Where(a => distinctIds.Contains(a.Id))
+                    .Select(a => a.Id)
+                    .ToListAsync();
+                foreach (var aid in validIds)
                 {
                     _db.PropertyAmenities.Add(new PropertyAmenity { PropertyId = prop.Id, AmenityId = aid });
                 }
@@ -593,16 +603,26 @@ namespace AirbnbBooking.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
-            var prop = await _db.Properties.Include(p => p.Bookings).FirstOrDefaultAsync(p => p.Id == id);
+            var prop = await _db.Properties
+                .Include(p => p.Bookings)
+                .Include(p => p.Reviews)
+                .FirstOrDefaultAsync(p => p.Id == id);
             if (prop == null) return NotFound();
             if (!_helper.IsOwnerOrAdmin(prop.HostId)) return Forbid();
 
             bool hasActiveBookings = prop.Bookings.Any(b => b.Status is "Confirmed" or "CheckedIn" or "Pending");
-            if (hasActiveBookings)
+            bool hasHistory = prop.Bookings.Count > 0 || prop.Reviews.Count > 0;
+            if (hasActiveBookings || hasHistory)
             {
                 prop.IsActive = false;
                 await _db.SaveChangesAsync();
-                TempData["Error"] = "Listing has active reservations so it was unpublished instead of permanently deleted.";
+
+                _helper.LogAudit(_db, _helper.GetCurrentUserId(), _helper.GetCurrentUserEmail(), "Property", "PropertyArchived",
+                    $"Unpublished listing '{prop.Title}' (#{id}) to preserve reservation/review history.", "Warning", "Property", id);
+
+                TempData["Error"] = hasActiveBookings
+                    ? "Listing has active reservations so it was unpublished instead of permanently deleted."
+                    : "Listing has past booking/review records so it was unpublished to preserve financial & review history.";
                 return RedirectToAction(nameof(MyProperties));
             }
 
@@ -752,6 +772,9 @@ namespace AirbnbBooking.Controllers
         [HttpPost]
         public async Task<IActionResult> ToggleWishlist(int propertyId, string? folderName)
         {
+            if (propertyId <= 0 || !await _db.Properties.AnyAsync(p => p.Id == propertyId))
+                return NotFound(new { ok = false, error = "Property not found." });
+
             int uid = _helper.GetCurrentUserId()!.Value;
             var existing = await _db.Wishlists.FirstOrDefaultAsync(w => w.GuestId == uid && w.PropertyId == propertyId);
             bool saved;
@@ -763,18 +786,20 @@ namespace AirbnbBooking.Controllers
             }
             else
             {
+                string folder = string.IsNullOrWhiteSpace(folderName) ? "Saved Stays" : folderName.Trim();
+                if (folder.Length > 60) folder = folder[..60];
                 _db.Wishlists.Add(new Wishlist
                 {
                     GuestId = uid,
                     PropertyId = propertyId,
-                    FolderName = string.IsNullOrWhiteSpace(folderName) ? "Saved Stays" : folderName.Trim(),
+                    FolderName = folder,
                     AddedAt = DateTime.Now
                 });
                 saved = true;
             }
 
             await _db.SaveChangesAsync();
-            return Json(new { saved });
+            return Json(new { ok = true, saved });
         }
     }
 }

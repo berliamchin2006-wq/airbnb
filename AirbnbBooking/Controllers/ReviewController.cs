@@ -64,7 +64,6 @@ namespace AirbnbBooking.Controllers
                 TempData["Error"] = "Reviews can only be submitted after check-out is completed.";
                 return RedirectToAction(nameof(Pending));
             }
-
             if (booking.Review?.GuestSubmittedAt != null)
             {
                 TempData["Info"] = "You have already submitted your review for this stay.";
@@ -89,6 +88,16 @@ namespace AirbnbBooking.Controllers
 
             if (booking == null) return NotFound();
             if (!_helper.IsOwnerOrAdmin(booking.GuestId)) return Forbid();
+            if (booking.Status != "Completed")
+            {
+                TempData["Error"] = "Reviews can only be submitted after check-out is completed.";
+                return RedirectToAction(nameof(Pending));
+            }
+            if (booking.Review?.GuestSubmittedAt != null)
+            {
+                TempData["Info"] = "You have already submitted your review for this stay.";
+                return RedirectToAction(nameof(Pending));
+            }
 
             string? savedPhoto = null;
             if (vm.ReviewPhoto != null)
@@ -170,7 +179,7 @@ namespace AirbnbBooking.Controllers
             if (!_helper.IsOwnerOrAdmin(booking.Property.HostId)) return Forbid();
             if (booking.Status != "Completed")
             {
-                TempData["Error"] = "Host reviews are available after check-out.";
+                TempData["Error"] = "Host reviews can only be submitted after check-out is completed.";
                 return RedirectToAction(nameof(Pending));
             }
 
@@ -198,6 +207,11 @@ namespace AirbnbBooking.Controllers
 
             if (booking == null) return NotFound();
             if (!_helper.IsOwnerOrAdmin(booking.Property.HostId)) return Forbid();
+            if (booking.Status != "Completed")
+            {
+                TempData["Error"] = "Host reviews can only be submitted after check-out is completed.";
+                return RedirectToAction(nameof(Pending));
+            }
 
             if (!ModelState.IsValid)
             {
@@ -286,8 +300,10 @@ namespace AirbnbBooking.Controllers
             var review = await _db.Reviews.FindAsync(id);
             if (review == null) return NotFound();
 
+            string cleanReason = string.IsNullOrWhiteSpace(reason) ? "Flagged by user for moderation" : reason.Trim();
+            if (cleanReason.Length > 300) cleanReason = cleanReason[..300];
             review.IsFlagged = true;
-            review.FlagReason = string.IsNullOrWhiteSpace(reason) ? "Flagged by user for moderation" : reason.Trim();
+            review.FlagReason = cleanReason;
             await _db.SaveChangesAsync();
 
             _helper.LogAudit(_db, _helper.GetCurrentUserId(), _helper.GetCurrentUserEmail(), "Review", "ReviewFlagged",
