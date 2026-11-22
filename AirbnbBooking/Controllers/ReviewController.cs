@@ -254,7 +254,7 @@ namespace AirbnbBooking.Controllers
             return RedirectToAction(nameof(Pending));
         }
 
-        // AJAX Helpful Vote
+        // AJAX Helpful Vote (Session-guarded against repeated vote spam)
         [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> HelpfulVote(int id)
@@ -262,9 +262,20 @@ namespace AirbnbBooking.Controllers
             var review = await _db.Reviews.FindAsync(id);
             if (review == null || !review.IsPublished) return NotFound();
 
+            var votedCsv = HttpContext.Session.GetString("VotedReviews") ?? "";
+            var votedSet = votedCsv.Split(',', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+            if (votedSet.Contains(id.ToString()))
+            {
+                return Json(new { ok = false, alreadyVoted = true, votes = review.HelpfulVotes });
+            }
+
             review.HelpfulVotes++;
             await _db.SaveChangesAsync();
-            return Json(new { ok = true, votes = review.HelpfulVotes });
+
+            votedSet.Add(id.ToString());
+            HttpContext.Session.SetString("VotedReviews", string.Join(',', votedSet));
+
+            return Json(new { ok = true, alreadyVoted = false, votes = review.HelpfulVotes });
         }
 
         // Flag Review for Admin Moderation

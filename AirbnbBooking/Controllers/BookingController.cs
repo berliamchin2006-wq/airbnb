@@ -348,6 +348,7 @@ namespace AirbnbBooking.Controllers
             var booking = await _db.Bookings
                 .Include(b => b.Property).ThenInclude(p => p.Host)
                 .Include(b => b.Guest)
+                .Include(b => b.PromoCode)
                 .Include(b => b.Payments)
                 .Include(b => b.HostPayout)
                 .FirstOrDefaultAsync(b => b.Id == id);
@@ -364,6 +365,7 @@ namespace AirbnbBooking.Controllers
                 return RedirectToAction(nameof(Details), new { id });
             }
 
+            bool wasPending = booking.Status == "Pending";
             var payment = booking.Payments.FirstOrDefault(p => p.Status == "Paid");
             decimal paidAmount = payment?.Amount ?? 0m;
             var refundCalc = _pricing.CalculateRefund(booking, paidAmount, DateTime.Now);
@@ -372,6 +374,11 @@ namespace AirbnbBooking.Controllers
             booking.CancellationReason = string.IsNullOrWhiteSpace(reason) ? "Cancelled by user" : reason.Trim();
             booking.CancelledAt = DateTime.Now;
             booking.CancelledByUserId = uid;
+
+            if (wasPending && booking.PromoCode != null && booking.PromoCode.CurrentUses > 0)
+            {
+                booking.PromoCode.CurrentUses--;
+            }
 
             if (payment != null && refundCalc.RefundAmount > 0)
             {

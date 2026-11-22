@@ -445,6 +445,8 @@
             maxPriceInput.value = '';
             document.getElementById('filterSortBy').value = 'featured';
             document.querySelectorAll('.amenity-cb').forEach(c => c.checked = false);
+            document.getElementById('searchValidationMsg')?.classList.add('d-none');
+            document.getElementById('priceValidationMsg')?.classList.add('d-none');
             runAjaxSearch(true);
         }
 

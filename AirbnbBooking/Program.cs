@@ -38,11 +38,15 @@ builder.Services.Configure<GzipCompressionProviderOptions>(o => o.Level = Compre
 builder.Services.AddControllersWithViews();
 builder.Services.AddSignalR();
 
-// Module 8: EF Core Optimized Connection Pooling
+// Module 8: EF Core Optimized Connection Pooling + SplitQuery (prevents Cartesian explosion warnings)
 builder.Services.AddDbContextPool<DB>(options =>
     options.UseSqlServer(
         resolvedConn,
-        sql => sql.EnableRetryOnFailure(maxRetryCount: 3)));
+        sql =>
+        {
+            sql.EnableRetryOnFailure(maxRetryCount: 3);
+            sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+        }));
 
 // Core Utilities & Services
 builder.Services.AddHttpContextAccessor();
@@ -85,6 +89,7 @@ using (var scope = app.Services.CreateScope())
     {
         db.Database.Migrate();
         DbSeeder.Seed(db, helper);
+        helper.SyncReviewVisibilityAndAggregateAsync(db, forceAll: true).GetAwaiter().GetResult();
     }
     catch (Exception ex)
     {

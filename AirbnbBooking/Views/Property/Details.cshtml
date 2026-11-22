@@ -573,6 +573,10 @@
             return bookedRanges.some(r => ymd >= r.start && ymd < r.end);
         }
 
+        function rangeOverlapsBooked(startYmd, endYmd) {
+            return bookedRanges.some(r => r.start < endYmd && r.end > startYmd);
+        }
+
         function renderAvailCalendar() {
             const grid = document.getElementById('calGrid');
             const label = document.getElementById('calMonthLabel');
@@ -628,7 +632,12 @@
             const ciEl = document.getElementById('bkCheckIn');
             const coEl = document.getElementById('bkCheckOut');
 
-            if (!pickingCheckout || ymd <= ciEl.value) {
+            if (!pickingCheckout || ymd <= ciEl.value || rangeOverlapsBooked(ciEl.value, ymd)) {
+                if (pickingCheckout && ymd > ciEl.value && rangeOverlapsBooked(ciEl.value, ymd)) {
+                    const errBox = document.getElementById('priceError');
+                    errBox.textContent = 'Selected range crosses already booked dates. Picked a new Check-In date instead.';
+                    errBox.classList.remove('d-none');
+                }
                 ciEl.value = ymd;
                 const nextDay = new Date(ymd + 'T00:00:00');
                 nextDay.setDate(nextDay.getDate() + 1);
@@ -718,13 +727,15 @@
         document.getElementById('applyPromoBtn')?.addEventListener('click', refreshPrice);
         refreshPrice();
 
-        // 4. AJAX Helpful Review Vote
+        // 4. AJAX Helpful Review Vote (Prevents duplicate clicks)
         document.querySelectorAll('.helpful-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const res = await fetch(`/Review/HelpfulVote?id=${btn.dataset.id}`, { method: 'POST' });
                 if (res.ok) {
                     const data = await res.json();
                     btn.querySelector('.vote-count').textContent = data.votes;
+                    btn.disabled = true;
+                    btn.classList.add('text-success', 'fw-semibold');
                 }
             });
         });

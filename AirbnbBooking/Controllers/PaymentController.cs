@@ -243,6 +243,12 @@ namespace AirbnbBooking.Controllers
             var payout = await _db.HostPayouts.Include(p => p.Host).FirstOrDefaultAsync(p => p.Id == id);
             if (payout == null) return NotFound();
 
+            if (payout.Status != "Pending")
+            {
+                TempData["Error"] = $"Cannot disburse payout {payout.PayoutReference}: current status is '{payout.Status}'.";
+                return RedirectToAction(nameof(Transactions));
+            }
+
             payout.Status = "Disbursed";
             payout.DisbursedAt = DateTime.Now;
             await _db.SaveChangesAsync();

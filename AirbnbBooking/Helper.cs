@@ -417,7 +417,7 @@ namespace AirbnbBooking
         // =====================================================================
         // 8. Reputation Aggregation & Mutual Double-Blind Review Helper
         // =====================================================================
-        public async Task SyncReviewVisibilityAndAggregateAsync(DB db, int? propertyId = null)
+        public async Task SyncReviewVisibilityAndAggregateAsync(DB db, int? propertyId = null, bool forceAll = false)
         {
             var now = DateTime.Now;
             var pendingReviews = await db.Reviews
@@ -438,6 +438,12 @@ namespace AirbnbBooking
             if (pendingReviews.Count > 0)
             {
                 await db.SaveChangesAsync();
+            }
+
+            if (forceAll)
+            {
+                var allIds = await db.Properties.Select(p => p.Id).ToListAsync();
+                foreach (var id in allIds) affectedPropertyIds.Add(id);
             }
 
             foreach (var pid in affectedPropertyIds)
