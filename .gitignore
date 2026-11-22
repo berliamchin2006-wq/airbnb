@@ -12,9 +12,6 @@
 *.userosscache
 *.sln.docstates
 
-# Local SQL Server Express runtime database files (recreated automatically by EF Core Migrations)
-*.mdf
-*.ldf
 
 # Temporary test & browser inspection files
 .playwright-mcp/
